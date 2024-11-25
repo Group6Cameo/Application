@@ -1,16 +1,16 @@
-from PyQt5.QtWidgets import QWidget
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPainter, QPixmap, QPalette, QColor
 import os
 import pkg_resources
 
 
-class ScreenSaverWidget(QWidget):
+class CamouflageWidget(QWidget):
     def __init__(self):
         super().__init__()
         # Get the absolute path to the assets directory
         assets_path = pkg_resources.resource_filename(
-            'rpi_control', 'assets/screensaver.png')
+            'rpi_control', 'assets/camouflage.png')
         self.image = QPixmap(assets_path)
 
         # Set dark green background (#002103)
