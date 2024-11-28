@@ -7,6 +7,19 @@ setup(
     install_requires=[
         "PyQt5>=5.15.0",
         "wifi>=0.3.8",
+        "opencv-python",
+        "cmake",
+        "face_recognition",
+        "cvzone",
+        "mediapipe",
+        "numpy",
+        "scipy",
+        "pillow",
+        "ultralytics",
+        "tensorflow",
+        "scikit-learn",
+        "face_recognition",
+        "dlib"
     ],
     entry_points={
         'console_scripts': [
