@@ -27,8 +27,10 @@ class FaceTrackingWidget(QWidget):
         self.worker = None
 
     def start_tracking(self):
+        print("function ran")
         self.worker = FaceTrackingWorker(self.face_tracker)
         self.worker.finished.connect(self.on_tracking_finished)
+        print("here???")
         self.worker.start()
 
     def on_tracking_finished(self):

@@ -21,7 +21,7 @@ class FaceTrackingSystem:
 
         # Initialize face detection and recognition models
         self.face_detector = dlib.get_frontal_face_detector()
-        self.shape_predictor = dlib.shape_predictor('rpi_control/utils/shape_predictor_68_face_landmarks.dat')
+        self.shape_predictor = dlib.shape_predictor('rpi_control/utils/models/shape_predictor_68_face_landmarks.dat')
 
         # Initialize tracking variables
         self.known_face_encodings = []
@@ -168,7 +168,7 @@ class FaceTrackingSystem:
                                          (shape.part(46).x, shape.part(46).y),
                                          (shape.part(47).x, shape.part(47).y)], axis=0)
 
-                    midpoint = ((left_eye[0] + right_eye[0]) // 2,
+                    midpoint = ((left_eye[0] + right_face_trackereye[0]) // 2,
                                 (left_eye[1] + right_eye[1]) // 2)
 
                     self.active_faces[face_id] = {
@@ -250,6 +250,7 @@ class FaceTrackingSystem:
         return frame
 
     def run(self):
+        print("started running")
         self.is_running = True
         prev_frame_time = time.time()
         fps = 0
