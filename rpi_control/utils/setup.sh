@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "Updating system packages..."
+# echo "Updating system packages..."
 sudo apt update
 sudo apt upgrade -y
 
@@ -8,13 +8,6 @@ echo "Installing system dependencies for OpenCV..."
 sudo apt install -y libhdf5-dev libhdf5-103 libqtgui4 libqtwebkit4 libqt4-test libatlas-base-dev libjasper-dev libilmbase23 libopenexr23 libgstreamer1.0-dev
 
 sudo apt install -y python3-picamera2
-
-echo "Installing virtual environment support..."
-sudo apt install -y python3-venv
-
-echo "Setting up Python virtual environment 'cameo'..."
-python3 -m venv ../cameo --system-site-packages
-source ../cameo/bin/activate
 
 echo "Installing Python dependencies..."
 pip install --upgrade pip

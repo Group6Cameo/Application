@@ -21,8 +21,7 @@ class FaceTrackingSystem:
 
         # Initialize face detection and recognition models
         self.face_detector = dlib.get_frontal_face_detector()
-        self.shape_predictor = dlib.shape_predictor(
-            'shape_predictor_68_face_landmarks.dat')
+        self.shape_predictor = dlib.shape_predictor('rpi_control/utils/shape_predictor_68_face_landmarks.dat')
 
         # Initialize tracking variables
         self.known_face_encodings = []
