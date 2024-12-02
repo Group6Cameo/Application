@@ -1,4 +1,4 @@
-PyQt5
+PyQt6
 wifi>=0.3.8
 opencv-python
 cmake

@@ -1,7 +1,7 @@
 import sys
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QPushButton, QStackedWidget, QHBoxLayout, QFrame)
-from PyQt5.QtCore import Qt
+from PyQt6.QtCore import Qt
 from .widgets.screensaver import ScreenSaverWidget
 from .widgets.network import NetworkConfigWidget
 from .widgets.face_tracking import FaceTrackingWidget
@@ -111,7 +111,7 @@ def main():
     app = QApplication(sys.argv)
     window = MainWindow()
     window.showFullScreen()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':

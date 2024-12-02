@@ -1,7 +1,6 @@
-from PyQt5.QtWidgets import QWidget
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPainter, QPixmap, QPalette, QColor
-import os
+from PyQt6.QtWidgets import QWidget
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QPainter, QPixmap, QPalette, QColor
 import pkg_resources
 
 
@@ -16,7 +15,7 @@ class ScreenSaverWidget(QWidget):
         # Set dark green background (#002103)
         self.setAutoFillBackground(True)
         palette = self.palette()
-        palette.setColor(QPalette.Window, QColor('#002103'))
+        palette.setColor(QPalette.ColorRole.Window, QColor('#002103'))
         self.setPalette(palette)
 
         # Remove any margins
@@ -26,13 +25,13 @@ class ScreenSaverWidget(QWidget):
         painter = QPainter(self)
 
         # Ensure no antialiasing or other effects
-        painter.setRenderHint(QPainter.SmoothPixmapTransform, False)
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, False)
 
         # Fill background with dark green first
         painter.fillRect(0, 0, self.width(), self.height(), QColor('#002103'))
 
         # Scale and draw image
         scaled_image = self.image.scaled(self.width(), self.height(),
-                                         Qt.IgnoreAspectRatio,
-                                         Qt.FastTransformation)
+                                         Qt.AspectRatioMode.IgnoreAspectRatio,
+                                         Qt.TransformationMode.FastTransformation)
         painter.drawPixmap(0, 0, scaled_image)
