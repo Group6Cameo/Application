@@ -8,9 +8,10 @@ from adafruit_servokit import ServoKit
 
 
 class FaceTrackingSystem:
-    def __init__(self):
+    def __init__(self, servo_kit):
         print("Initializing Face Tracking System...")
         # Initialize camera
+        print("Hee it init")
         self.picam2 = Picamera2()
         camera_config = self.picam2.create_video_configuration(
             main={"size": (640, 480), "format": "RGB888"},
@@ -50,10 +51,7 @@ class FaceTrackingSystem:
         self.last_frame = None
         self.smoothing_factor = 0.5
 
-        # Initialize servos
-        self.kit = ServoKit(channels=16)
-        self.kit.servo[0].set_pulse_width_range(400, 2500)
-        self.kit.servo[2].set_pulse_width_range(400, 2600)
+        self.kit = servo_kit
         self.servo0_angle = 90  # Up/Down servo angle
         self.servo2_angle = 90  # Left/Right servo angle
         self.servo_min_angle = 0
@@ -168,7 +166,7 @@ class FaceTrackingSystem:
                                          (shape.part(46).x, shape.part(46).y),
                                          (shape.part(47).x, shape.part(47).y)], axis=0)
 
-                    midpoint = ((left_eye[0] + right_face_trackereye[0]) // 2,
+                    midpoint = ((left_eye[0] + right_eye[0]) // 2,
                                 (left_eye[1] + right_eye[1]) // 2)
 
                     self.active_faces[face_id] = {
@@ -257,6 +255,7 @@ class FaceTrackingSystem:
 
         while self.is_running:
             current_time = time.time()
+            print("processing frame")
 
             elapsed = current_time - prev_frame_time
             if elapsed < self.frame_time:

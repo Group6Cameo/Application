@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QPushButton
 from PyQt6.QtCore import QThread, pyqtSignal
 from ..utils.motor_tracking_impr import FaceTrackingSystem
+from adafruit_servokit import ServoKit
 
 
 class FaceTrackingWorker(QThread):
@@ -23,7 +24,13 @@ class FaceTrackingWidget(QWidget):
         start_button.pressed.connect(self.start_tracking)
         layout.addWidget(start_button)
         self.setLayout(layout)
-        self.face_tracker = FaceTrackingSystem()
+
+        # Initialize servos
+        self.kit = ServoKit(channels=16)
+        self.kit.servo[0].set_pulse_width_range(400, 2500)
+        self.kit.servo[2].set_pulse_width_range(400, 2600)
+
+        self.face_tracker = FaceTrackingSystem(self.kit)
         self.worker = None
 
     def start_tracking(self):
