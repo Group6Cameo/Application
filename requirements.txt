@@ -1,4 +1,4 @@
-PyQt5>=5.15.0
+PyQt5
 wifi>=0.3.8
 opencv-python
 cmake
@@ -9,7 +9,7 @@ numpy
 scipy
 pillow
 ultralytics
-tensorflow
 scikit-learn
 face_recognition
 dlib
+picamera2

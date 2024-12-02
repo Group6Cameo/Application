@@ -16,10 +16,10 @@ setup(
         "scipy",
         "pillow",
         "ultralytics",
-        "tensorflow",
         "scikit-learn",
         "face_recognition",
-        "dlib"
+        "dlib",
+        "picamera2"
     ],
     entry_points={
         'console_scripts': [

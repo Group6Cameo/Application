@@ -20,11 +20,12 @@ class MenuWidget(QWidget):
         self.calibration_btn = QPushButton("Calibration")
         self.camouflage_btn = QPushButton("Camouflage")
         self.screensaver_btn = QPushButton("Screensaver")
+        self.close_btn = QPushButton("Close")
 
         # Add buttons to layout
         for btn in [self.wifi_btn, self.face_track_btn,
                     self.calibration_btn, self.camouflage_btn,
-                    self.screensaver_btn]:
+                    self.screensaver_btn, self.close_btn]:
             btn.setMinimumHeight(50)
             layout.addWidget(btn)
 
@@ -79,6 +80,8 @@ class MainWindow(QMainWindow):
             lambda: self.switch_screen(4))
         self.menu_widget.screensaver_btn.clicked.connect(
             lambda: self.switch_screen(0))
+        self.menu_widget.close_btn.clicked.connect(self.close_app)
+        
 
         # Add widgets to main layout
         main_layout.addWidget(self.menu_widget)
@@ -100,6 +103,8 @@ class MainWindow(QMainWindow):
             self.menu_widget.show()
         else:
             self.menu_widget.hide()
+    def close_app(self):
+        sys.exit(0)
 
 
 def main():
