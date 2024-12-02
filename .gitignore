@@ -1,4 +1,3 @@
 **/__pycache__/
 
-/rpi_control/utils/*.dat
-/rpi_control/utils/*.caffemodel
+/rpi_control/utils/models
