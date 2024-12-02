@@ -52,12 +52,7 @@ class FaceTrackingSystem:
         self.smoothing_factor = 0.5
 
         self.kit = servo_kit
-        self.servo0_angle = 90  # Up/Down servo angle
-        self.servo2_angle = 90  # Left/Right servo angle
-        self.servo_min_angle = 0
-        self.servo_max_angle = 180
-        self.kit.servo[0].angle = self.servo0_angle
-        self.kit.servo[2].angle = self.servo2_angle
+        
 
         # Deadzone parameters
         self.deadzone_x = 50

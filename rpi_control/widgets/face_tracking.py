@@ -29,6 +29,12 @@ class FaceTrackingWidget(QWidget):
         self.kit = ServoKit(channels=16)
         self.kit.servo[0].set_pulse_width_range(400, 2500)
         self.kit.servo[2].set_pulse_width_range(400, 2600)
+        self.servo0_angle = 90  # Up/Down servo angle
+        self.servo2_angle = 90  # Left/Right servo angle
+        self.servo_min_angle = 0
+        self.servo_max_angle = 180
+        self.kit.servo[0].angle = self.servo0_angle
+        self.kit.servo[2].angle = self.servo2_angle
 
         self.face_tracker = FaceTrackingSystem(self.kit)
         self.worker = None
