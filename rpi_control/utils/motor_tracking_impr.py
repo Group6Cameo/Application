@@ -33,10 +33,10 @@ class FaceTrackingSystem:
             'rpi_control/utils/models/shape_predictor_68_face_landmarks.dat')
 
         # Initialize tracking variables
-        self.known_faces = {}  # {face_id: {'encoding': encoding, 'last_seen': timestamp}}
-        # {face_id: {'position': (x1,y1,x2,y2), 'midpoint': (x,y)}}
-        self.active_faces = {}
+        self.known_face_encodings = []
+        self.known_face_ids = []
         self.current_id = 1
+        self.active_faces = {}  # {face_id: {'encoding': encoding, 'last_seen': timestamp}}
 
         # Parameters
         self.recognition_threshold = 0.6
@@ -94,15 +94,15 @@ class FaceTrackingSystem:
             return None
 
     def find_best_match(self, encoding):
-        if not self.known_faces:
+        if not self.known_face_encodings:
             return None
 
         distances = face_recognition.face_distance(
-            self.known_faces.values(), encoding)
+            self.known_face_encodings, encoding)
         min_distance = min(distances)
 
         if min_distance < self.recognition_threshold:
-            return list(self.known_faces.keys())[np.argmin(distances)]
+            return self.known_face_ids[np.argmin(distances)]
         return None
 
     def calculate_fps(self, current_time):
@@ -137,6 +137,8 @@ class FaceTrackingSystem:
         should_process = (self.frame_count % self.process_every_n_frames == 0 and
                           time_since_last_process >= self.frame_time)
 
+        active_ids = set()
+
         if should_process:
             self.last_process_time = current_time
             faces = self.detect_faces(frame)
@@ -149,29 +151,38 @@ class FaceTrackingSystem:
 
                 face_id = self.find_best_match(encoding)
 
-                if face_id is None and len(self.known_faces) < self.max_faces:
+                if face_id is None and len(self.known_face_encodings) < self.max_faces:
                     face_id = self.current_id
                     self.current_id += 1
-                    self.known_faces[face_id] = {
-                        'encoding': encoding,
-                        'last_seen': current_time
-                    }
+                    self.known_face_encodings.append(encoding)
+                    self.known_face_ids.append(face_id)
                     print(f"New face detected: ID {face_id}")
 
                 if face_id is not None:
-                    # Update last seen time for known face
-                    if face_id in self.known_faces:
-                        self.known_faces[face_id]['last_seen'] = current_time
-
-                    # Update active face position and midpoint
                     shape = self.shape_predictor(frame, face)
-                    midpoint = self.calculate_face_midpoint(frame, face)
+                    left_eye = np.mean([(shape.part(36).x, shape.part(36).y),
+                                        (shape.part(37).x, shape.part(37).y),
+                                        (shape.part(38).x, shape.part(38).y),
+                                        (shape.part(39).x, shape.part(39).y),
+                                        (shape.part(40).x, shape.part(40).y),
+                                        (shape.part(41).x, shape.part(41).y)], axis=0)
+                    right_eye = np.mean([(shape.part(42).x, shape.part(42).y),
+                                         (shape.part(43).x, shape.part(43).y),
+                                         (shape.part(44).x, shape.part(44).y),
+                                         (shape.part(45).x, shape.part(45).y),
+                                         (shape.part(46).x, shape.part(46).y),
+                                         (shape.part(47).x, shape.part(47).y)], axis=0)
+
+                    midpoint = ((left_eye[0] + right_eye[0]) // 2,
+                                (left_eye[1] + right_eye[1]) // 2)
 
                     self.active_faces[face_id] = {
+                        'encoding': encoding,
+                        'last_seen': current_time,
                         'position': (x1, y1, x2, y2),
-                        'midpoint': midpoint,
-                        'last_seen': current_time
+                        'midpoint': midpoint
                     }
+                    active_ids.add(face_id)
 
         # Remove faces not seen recently
         self.active_faces = {
@@ -294,6 +305,3 @@ class FaceTrackingSystem:
         current_time = time.time()
         return [face_id for face_id, data in self.active_faces.items()
                 if current_time - data['last_seen'] < 1]
-
-    def get_known_faces(self):
-        return list(self.known_faces.keys())
