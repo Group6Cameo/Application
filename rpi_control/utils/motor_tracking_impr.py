@@ -5,6 +5,7 @@ import face_recognition
 from picamera2 import Picamera2
 import time
 from adafruit_servokit import ServoKit
+from PyQt6.QtGui import QImage
 
 
 class FaceTrackingSystem:
@@ -22,7 +23,8 @@ class FaceTrackingSystem:
 
         # Initialize face detection and recognition models
         self.face_detector = dlib.get_frontal_face_detector()
-        self.shape_predictor = dlib.shape_predictor('rpi_control/utils/models/shape_predictor_68_face_landmarks.dat')
+        self.shape_predictor = dlib.shape_predictor(
+            'rpi_control/utils/models/shape_predictor_68_face_landmarks.dat')
 
         # Initialize tracking variables
         self.known_face_encodings = []
@@ -242,10 +244,12 @@ class FaceTrackingSystem:
             cv2.putText(frame, f'Servo2 Angle: {int(self.servo2_angle)}', (10, y_offset),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 1)
 
+        # Convert BGR to RGB for Qt
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         self.frame_count += 1
-        return frame
+        return rgb_frame
 
-    def run(self):
+    def run(self, frame_signal):
         print("started running")
         self.is_running = True
         prev_frame_time = time.time()
@@ -253,9 +257,8 @@ class FaceTrackingSystem:
 
         while self.is_running:
             current_time = time.time()
-            print("processing frame")
-
             elapsed = current_time - prev_frame_time
+
             if elapsed < self.frame_time:
                 time.sleep(self.frame_time - elapsed)
                 current_time = time.time()
@@ -266,14 +269,18 @@ class FaceTrackingSystem:
                 new_fps = self.calculate_fps(current_time)
                 fps = fps * 0.9 + new_fps * 0.1 if fps > 0 else new_fps
 
+            # Add FPS text to frame
             cv2.putText(frame, f'FPS: {int(fps)}', (10, 30),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
-            cv2.imshow("Face Tracking", frame)
-            prev_frame_time = current_time
+            # Convert frame to QImage and emit
+            height, width, channel = frame.shape
+            bytes_per_line = 3 * width
+            q_image = QImage(frame.data, width, height,
+                             bytes_per_line, QImage.Format.Format_RGB888)
+            frame_signal.emit(q_image)
 
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
+            prev_frame_time = current_time
 
         self.cleanup()
 
