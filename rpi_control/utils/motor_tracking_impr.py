@@ -12,14 +12,20 @@ class FaceTrackingSystem:
     def __init__(self, servo_kit):
         print("Initializing Face Tracking System...")
         # Initialize camera
-        print("Hee it init")
-        self.picam2 = Picamera2()
-        camera_config = self.picam2.create_video_configuration(
-            main={"size": (640, 480), "format": "RGB888"},
-            controls={"FrameRate": 30}
-        )
-        self.picam2.configure(camera_config)
-        self.picam2.start()
+        try:
+            self.picam2 = Picamera2()
+            camera_config = self.picam2.create_video_configuration(
+                main={"size": (640, 480), "format": "RGB888"},
+                controls={"FrameRate": 30}
+            )
+            self.picam2.configure(camera_config)
+            self.picam2.start()
+            time.sleep(0.1)  # Give camera time to initialize
+        except Exception as e:
+            print(f"Camera initialization error: {e}")
+            if hasattr(self, 'picam2'):
+                self.picam2.close()
+            raise
 
         # Initialize face detection and recognition models
         self.face_detector = dlib.get_frontal_face_detector()
@@ -289,5 +295,7 @@ class FaceTrackingSystem:
         self.cleanup()
 
     def cleanup(self):
-        self.picam2.stop()
+        if hasattr(self, 'picam2'):
+            self.picam2.close()
+            self.picam2 = None
         cv2.destroyAllWindows()

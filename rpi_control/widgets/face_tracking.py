@@ -80,6 +80,8 @@ class FaceTrackingWidget(QWidget):
             self.video_label.clear()
 
             # Clean up the face tracker
+            if self.face_tracker:
+                self.face_tracker.cleanup()
             self.face_tracker = None
             self.worker = None
 
@@ -89,6 +91,12 @@ class FaceTrackingWidget(QWidget):
             print("Face tracking stopped.")
 
     def on_tracking_finished(self):
+        # Clean up the face tracker
+        if self.face_tracker:
+            self.face_tracker.cleanup()
+        self.face_tracker = None
+        self.worker = None
+
         # Update button states
         self.start_button.setEnabled(True)
         self.stop_button.setEnabled(False)
