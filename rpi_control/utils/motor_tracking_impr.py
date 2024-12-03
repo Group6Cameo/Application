@@ -214,6 +214,7 @@ class FaceTrackingSystem:
 
         # Servo control for face ID 1
         if self.face_to_track in self.active_faces:
+            print(self.active_faces)
             data = self.active_faces[1]
             midpoint = data['midpoint']
             frame_center_x = frame.shape[1] // 2
@@ -257,7 +258,6 @@ class FaceTrackingSystem:
         return rgb_frame
 
     def run(self, frame_signal):
-        print("started running")
         self.is_running = True
         prev_frame_time = time.time()
         fps = 0
@@ -293,11 +293,9 @@ class FaceTrackingSystem:
 
     def stop(self):
         self.is_running = False
-        # self.cleanup()
 
     def cleanup(self):
         if hasattr(self, 'picam2'):
-            print("picam", self.picam2)
             if self.picam2:
                 self.picam2.close()
                 self.picam2 = None
@@ -306,4 +304,4 @@ class FaceTrackingSystem:
     def get_active_faces(self):
         current_time = time.time()
         return [face_id for face_id, data in self.active_faces.items()
-                if current_time - data['last_seen'] < 0.5]
+                if current_time - data['last_seen'] < 1]
