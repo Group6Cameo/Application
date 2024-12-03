@@ -43,6 +43,7 @@ class FaceTrackingSystem:
         self.process_every_n_frames = 3
         self.frame_count = 0
         self.max_faces = 10
+        self.face_to_track = 1
 
         # FPS calculation
         self.fps_frames = []
@@ -212,7 +213,7 @@ class FaceTrackingSystem:
             y_offset += 20
 
         # Servo control for face ID 1
-        if 1 in self.active_faces:
+        if self.face_to_track in self.active_faces:
             data = self.active_faces[1]
             midpoint = data['midpoint']
             frame_center_x = frame.shape[1] // 2
