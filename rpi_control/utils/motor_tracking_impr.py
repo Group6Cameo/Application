@@ -302,3 +302,8 @@ class FaceTrackingSystem:
                 self.picam2.close()
                 self.picam2 = None
         cv2.destroyAllWindows()
+
+    def get_active_faces(self):
+        current_time = time.time()
+        return [face_id for face_id, data in self.active_faces.items()
+                if current_time - data['last_seen'] < 0.5]
