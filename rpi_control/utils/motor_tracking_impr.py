@@ -292,10 +292,12 @@ class FaceTrackingSystem:
 
     def stop(self):
         self.is_running = False
-        self.cleanup()
+        # self.cleanup()
 
     def cleanup(self):
         if hasattr(self, 'picam2'):
-            self.picam2.close()
-            self.picam2 = None
+            print("picam", self.picam2)
+            if self.picam2:
+                self.picam2.close()
+                self.picam2 = None
         cv2.destroyAllWindows()
