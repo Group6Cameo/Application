@@ -29,15 +29,16 @@ class FaceTrackingWidget(QWidget):
         self.video_label.setMinimumSize(640, 480)
         self.video_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        start_button = QPushButton("Start tracking")
-        start_button.pressed.connect(self.start_tracking)
+        self.start_button = QPushButton("Start tracking")
+        self.start_button.pressed.connect(self.start_tracking)
 
-        stop_button = QPushButton("Stop tracking")
-        stop_button.pressed.connect(self.stop_tracking)
+        self.stop_button = QPushButton("Stop tracking")
+        self.stop_button.pressed.connect(self.stop_tracking)
+        self.stop_button.setEnabled(False)  # Initially disabled
 
         layout.addWidget(self.video_label)
-        layout.addWidget(start_button)
-        layout.addWidget(stop_button)
+        layout.addWidget(self.start_button)
+        layout.addWidget(self.stop_button)
         self.setLayout(layout)
 
         # Initialize servos
@@ -55,24 +56,43 @@ class FaceTrackingWidget(QWidget):
         self.kit.servo[0].angle = self.servo0_angle
         self.kit.servo[2].angle = self.servo2_angle
 
-        self.face_tracker = FaceTrackingSystem(self.kit)
+        self.face_tracker = None
         self.worker = None
 
     def update_frame(self, qimage):
         self.video_label.setPixmap(QPixmap.fromImage(qimage))
 
     def start_tracking(self):
+        # Create a new face tracker instance if needed
+        if not self.face_tracker:
+            self.face_tracker = FaceTrackingSystem(self.kit)
+
         self.worker = FaceTrackingWorker(self.face_tracker)
         self.worker.frame_ready.connect(self.update_frame)
         self.worker.finished.connect(self.on_tracking_finished)
         self.worker.start()
 
-    def on_tracking_finished(self):
-        print("Face tracking has completed.")
+        # Update button states
+        self.start_button.setEnabled(False)
+        self.stop_button.setEnabled(True)
 
     def stop_tracking(self):
         if self.worker and self.worker.isRunning():
             self.face_tracker.stop()
             self.worker.wait()
-            self.video_label.clear()  # Clear the video display
+            self.video_label.clear()
+
+            # Clean up the face tracker
+            self.face_tracker = None
+            self.worker = None
+
+            # Update button states
+            self.start_button.setEnabled(True)
+            self.stop_button.setEnabled(False)
             print("Face tracking stopped.")
+
+    def on_tracking_finished(self):
+        # Update button states
+        self.start_button.setEnabled(True)
+        self.stop_button.setEnabled(False)
+        print("Face tracking has completed.")
