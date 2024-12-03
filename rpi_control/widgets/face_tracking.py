@@ -37,6 +37,7 @@ class FaceTrackingWidget(QWidget):
 
         layout.addWidget(self.video_label)
         layout.addWidget(start_button)
+        layout.addWidget(stop_button)
         self.setLayout(layout)
 
         # Initialize servos
@@ -68,3 +69,10 @@ class FaceTrackingWidget(QWidget):
 
     def on_tracking_finished(self):
         print("Face tracking has completed.")
+
+    def stop_tracking(self):
+        if self.worker and self.worker.isRunning():
+            self.face_tracker.stop()
+            self.worker.wait()
+            self.video_label.clear()  # Clear the video display
+            print("Face tracking stopped.")
