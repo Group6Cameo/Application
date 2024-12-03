@@ -4,7 +4,6 @@ from PyQt6.QtGui import QImage, QPixmap
 from ..utils.motor_tracking_impr import FaceTrackingSystem
 from adafruit_servokit import ServoKit
 import time
-import cv2
 
 
 class FaceTrackingWorker(QThread):
@@ -33,18 +32,18 @@ class FaceTrackingWidget(QWidget):
         start_button = QPushButton("Start tracking")
         start_button.pressed.connect(self.start_tracking)
 
+        stop_button = QPushButton("Stop tracking")
+        stop_button.pressed.connect(self.stop_tracking)
+
         layout.addWidget(self.video_label)
         layout.addWidget(start_button)
         self.setLayout(layout)
 
         # Initialize servos
         self.kit = ServoKit(channels=16)
-        for s in range(5):
-            print(f"Channel: {s}")
-            self.kit.servo[s].angle = 90
-            time.sleep(1)
-            self.kit.servo[s].angle = 0
-            time.sleep(1)
+        self.kit.servo[0].angle = 90
+        self.kit.servo[2].angle = 90
+        time.sleep(1)
 
         self.kit.servo[0].set_pulse_width_range(400, 2500)
         self.kit.servo[2].set_pulse_width_range(400, 2600)
