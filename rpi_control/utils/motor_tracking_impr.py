@@ -37,13 +37,14 @@ class FaceTrackingSystem:
         self.known_face_ids = []
         self.current_id = 1
         self.active_faces = {}  # {face_id: {'encoding': encoding, 'last_seen': timestamp}}
+        self.face_to_track = 1
+
 
         # Parameters
         self.recognition_threshold = 0.6
         self.process_every_n_frames = 3
         self.frame_count = 0
         self.max_faces = 10
-        self.face_to_track = 1
 
         # FPS calculation
         self.fps_frames = []
@@ -302,6 +303,4 @@ class FaceTrackingSystem:
         cv2.destroyAllWindows()
 
     def get_active_faces(self):
-        current_time = time.time()
-        return [face_id for face_id, data in self.active_faces.items()
-                if current_time - data['last_seen'] < 1]
+        return self.known_face_ids
