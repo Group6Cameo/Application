@@ -76,12 +76,11 @@ class FaceTrackingWidget(QWidget):
 
     def update_face_list(self):
         if self.face_tracker:
-            # Get all known faces instead of just active ones
-            known_faces = self.face_tracker.get_known_faces()
+            current_faces = self.face_tracker.get_active_faces()
             current_text = self.face_select.currentText()
 
             self.face_select.clear()
-            self.face_select.addItems([f"Face {id}" for id in known_faces])
+            self.face_select.addItems([f"Face {id}" for id in current_faces])
 
             # Try to maintain the previous selection if possible
             if current_text:

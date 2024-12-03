@@ -33,10 +33,10 @@ class FaceTrackingSystem:
             'rpi_control/utils/models/shape_predictor_68_face_landmarks.dat')
 
         # Initialize tracking variables
-        self.known_faces = {}  # {face_id: {'encoding': encoding, 'last_seen': timestamp}}
-        # Keeps existing structure with position, midpoint, etc.
-        self.active_faces = {}
+        self.known_face_encodings = []
+        self.known_face_ids = []
         self.current_id = 1
+        self.active_faces = {}  # {face_id: {'encoding': encoding, 'last_seen': timestamp}}
 
         # Parameters
         self.recognition_threshold = 0.6
@@ -94,15 +94,15 @@ class FaceTrackingSystem:
             return None
 
     def find_best_match(self, encoding):
-        if not self.known_faces:
+        if not self.known_face_encodings:
             return None
 
         distances = face_recognition.face_distance(
-            list(self.known_faces.values()), encoding)
+            self.known_face_encodings, encoding)
         min_distance = min(distances)
 
         if min_distance < self.recognition_threshold:
-            return list(self.known_faces.keys())[np.argmin(distances)]
+            return self.known_face_ids[np.argmin(distances)]
         return None
 
     def calculate_fps(self, current_time):
@@ -137,6 +137,8 @@ class FaceTrackingSystem:
         should_process = (self.frame_count % self.process_every_n_frames == 0 and
                           time_since_last_process >= self.frame_time)
 
+        active_ids = set()
+
         if should_process:
             self.last_process_time = current_time
             faces = self.detect_faces(frame)
@@ -149,20 +151,14 @@ class FaceTrackingSystem:
 
                 face_id = self.find_best_match(encoding)
 
-                if face_id is None and len(self.known_faces) < self.max_faces:
+                if face_id is None and len(self.known_face_encodings) < self.max_faces:
                     face_id = self.current_id
                     self.current_id += 1
-                    self.known_faces[face_id] = {
-                        'encoding': encoding,
-                        'last_seen': current_time
-                    }
+                    self.known_face_encodings.append(encoding)
+                    self.known_face_ids.append(face_id)
                     print(f"New face detected: ID {face_id}")
 
                 if face_id is not None:
-                    # Update last seen time for known face
-                    if face_id in self.known_faces:
-                        self.known_faces[face_id]['last_seen'] = current_time
-
                     shape = self.shape_predictor(frame, face)
                     left_eye = np.mean([(shape.part(36).x, shape.part(36).y),
                                         (shape.part(37).x, shape.part(37).y),
@@ -186,6 +182,7 @@ class FaceTrackingSystem:
                         'position': (x1, y1, x2, y2),
                         'midpoint': midpoint
                     }
+                    active_ids.add(face_id)
 
         # Remove faces not seen recently
         self.active_faces = {
@@ -308,6 +305,3 @@ class FaceTrackingSystem:
         current_time = time.time()
         return [face_id for face_id, data in self.active_faces.items()
                 if current_time - data['last_seen'] < 1]
-
-    def get_known_faces(self):
-        return list(self.known_faces.keys())
