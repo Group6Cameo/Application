@@ -35,9 +35,17 @@ class FaceTrackingSystem:
                 self.picam2.close()
             raise
 
+         # Initialize tracking variables
+        self.known_face_encodings = []
+        self.known_face_ids = []
+        self.current_id = 1
+        self.active_faces = {}  # {face_id: {'encoding': encoding, 'last_seen': timestamp}}
+        self.face_to_track = 1
+
         # Initialize face detection and recognition models
         self.face_detector = dlib.get_frontal_face_detector()
-        self.shape_predictor = dlib.shape_prPicamera2
+        self.shape_predictor = dlib.shape_predictor(
+            'rpi_control/utils/models/shape_predictor_68_face_landmarks.dat')
         # Parameters
         self.recognition_threshold = 0.6
         self.process_every_n_frames = 3

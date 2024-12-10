@@ -7,7 +7,7 @@ from .widgets.network import NetworkConfigWidget
 from .widgets.face_tracking import FaceTrackingWidget
 from .widgets.calibration import CalibrationWidget
 from .widgets.camouflage import CamouflageWidget
-from .utils.brightness_manager import BrightnessManager
+# from .utils.brightness_manager import BrightnessManager
 
 
 class MenuWidget(QWidget):
@@ -37,8 +37,8 @@ class MenuWidget(QWidget):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.brightness_manager = BrightnessManager()
-        self.brightness_manager.start()
+        # self.brightness_manager = BrightnessManager()
+        # self.brightness_manager.start()
         self.initUI()
 
     def initUI(self):
