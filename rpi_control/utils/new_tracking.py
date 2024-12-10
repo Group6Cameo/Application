@@ -31,7 +31,7 @@ class FaceTrackingSystem:
         # Initialize face detection and recognition models
         self.face_detector = dlib.get_frontal_face_detector()
         self.shape_predictor = dlib.shape_predictor(
-            'shape_predictor_68_face_landmarks.dat')
+            'rpi_control/utils/models/shape_predictor_68_face_landmarks.dat')
 
         # Initialize tracking variables
         self.known_face_encodings = []
@@ -57,10 +57,12 @@ class FaceTrackingSystem:
         self.frame_count = 0
         self.last_process_time = time.time()
 
+        # Frame smoothing
+        self.last_frame = None
+        self.smoothing_factor = 0.5
+
         # Frame smself.kit.servo[0].set_pulse_width_range(400, 2600)
-        self.kit.servo[1].set_pulse_width_range(400, 2600)
-        self.kit.servo[2].set_pulse_width_range(400, 2600)
-        self.kit.servo[3].set_pulse_width_range(400, 2600)
+        self.kit = servo_kit
 
         # Servo angles
         # Motor 1: Horizontal control (left-right), 90 is center
