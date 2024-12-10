@@ -5,6 +5,8 @@ import face_recognition
 from picamera2 import Picamera2
 import time
 from adafruit_servokit import ServoKit
+from PyQt6.QtGui import QImage
+
 
 def set_arm_position(kit, angle):
     # angle: 0 to 180
@@ -13,6 +15,7 @@ def set_arm_position(kit, angle):
         raise ValueError("Angle must be between 0 and 180 degrees.")
     kit.servo[3].angle = angle
     kit.servo[2].angle = 180 - angle
+
 
 class FaceTrackingSystem:
     def __init__(self, servo_kit):
@@ -27,8 +30,9 @@ class FaceTrackingSystem:
 
         # Initialize face detection and recognition models
         self.face_detector = dlib.get_frontal_face_detector()
-        self.shape_predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
-        
+        self.shape_predictor = dlib.shape_predictor(
+            'shape_predictor_68_face_landmarks.dat')
+
         # Initialize tracking variables
         self.known_face_encodings = []
         self.known_face_ids = []
@@ -60,12 +64,12 @@ class FaceTrackingSystem:
 
         # Servo angles
         # Motor 1: Horizontal control (left-right), 90 is center
-        self.servo1_angle = 90  
+        self.servo1_angle = 90
         # Motor 0: Vertical partial control, 90 is center
         self.servo0_angle = 90
         # Arm angle for motor 2 & 3: vertical extension, 90 is center
-        self.arm_angle = 90  
-        
+        self.arm_angle = 90
+
         # Initialize servo positions
         self.kit.servo[0].angle = self.servo0_angle
         self.kit.servo[1].angle = self.servo1_angle
@@ -121,8 +125,10 @@ class FaceTrackingSystem:
         """Get face encoding"""
         try:
             shape = self.shape_predictor(frame, face)
-            face_locations = [(face.top(), face.right(), face.bottom(), face.left())]
-            encoding = face_recognition.face_encodings(frame, face_locations)[0]
+            face_locations = [
+                (face.top(), face.right(), face.bottom(), face.left())]
+            encoding = face_recognition.face_encodings(
+                frame, face_locations)[0]
             return encoding
         except:
             return None
@@ -132,9 +138,10 @@ class FaceTrackingSystem:
         if not self.known_face_encodings:
             return None
 
-        distances = face_recognition.face_distance(self.known_face_encodings, encoding)
+        distances = face_recognition.face_distance(
+            self.known_face_encodings, encoding)
         min_distance = min(distances)
-        
+
         if min_distance < self.recognition_threshold:
             return self.known_face_ids[np.argmin(distances)]
         return None
@@ -146,14 +153,15 @@ class FaceTrackingSystem:
             if time_diff > 0:
                 current_fps = 1.0 / time_diff
                 self.fps_frames.append(current_time)
-                
+
                 while len(self.fps_frames) > self.fps_window:
                     self.fps_frames.pop(0)
-                
+
                 if len(self.fps_frames) > 1:
-                    avg_fps = (len(self.fps_frames) - 1) / (self.fps_frames[-1] - self.fps_frames[0])
+                    avg_fps = (len(self.fps_frames) - 1) / \
+                        (self.fps_frames[-1] - self.fps_frames[0])
                     return int(avg_fps)
-        
+
         self.fps_frames.append(current_time)
         return 0
 
@@ -161,32 +169,32 @@ class FaceTrackingSystem:
         current_time = time.time()
         frame = self.picam2.capture_array()
         displayed_info = []
-        
+
         if self.last_frame is not None:
-            frame = cv2.addWeighted(frame, self.smoothing_factor, 
+            frame = cv2.addWeighted(frame, self.smoothing_factor,
                                     self.last_frame, 1 - self.smoothing_factor, 0)
         self.last_frame = frame.copy()
 
         time_since_last_process = current_time - self.last_process_time
-        should_process = (self.frame_count % self.process_every_n_frames == 0 and 
+        should_process = (self.frame_count % self.process_every_n_frames == 0 and
                           time_since_last_process >= self.frame_time)
 
         active_ids = set()
-        
+
         if should_process:
             self.last_process_time = current_time
-            
+
             faces = self.detect_faces(frame)
-            
+
             for face in faces:
                 x1, y1, x2, y2 = face.left(), face.top(), face.right(), face.bottom()
-                
+
                 encoding = self.get_face_encoding(frame, face)
                 if encoding is None:
                     continue
 
                 face_id = self.find_best_match(encoding)
-                
+
                 if face_id is None:
                     if len(self.known_face_encodings) < self.max_faces:
                         face_id = self.current_id
@@ -209,8 +217,8 @@ class FaceTrackingSystem:
                                          (shape.part(45).x, shape.part(45).y),
                                          (shape.part(46).x, shape.part(46).y),
                                          (shape.part(47).x, shape.part(47).y)], axis=0)
-                    
-                    midpoint = ((left_eye[0] + right_eye[0]) // 2, 
+
+                    midpoint = ((left_eye[0] + right_eye[0]) // 2,
                                 (left_eye[1] + right_eye[1]) // 2)
 
                     self.active_faces[face_id] = {
@@ -236,14 +244,15 @@ class FaceTrackingSystem:
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
                 midpoint = data['midpoint']
-                cv2.circle(frame, (int(midpoint[0]), int(midpoint[1])), 
+                cv2.circle(frame, (int(midpoint[0]), int(midpoint[1])),
                            2, (0, 255, 0), -1)
 
-                displayed_info.append((face_id, int(midpoint[0]), int(midpoint[1])))
+                displayed_info.append(
+                    (face_id, int(midpoint[0]), int(midpoint[1])))
 
         displayed_info.sort(key=lambda x: x[0])
         for face_id, x, y in displayed_info:
-            cv2.putText(frame, f'XY{face_id}: ({x},{y})', 
+            cv2.putText(frame, f'XY{face_id}: ({x},{y})',
                         (10, y_offset),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
             y_offset += 20
@@ -267,12 +276,14 @@ class FaceTrackingSystem:
                 # Calculate the desired angle change
                 delta_servo1 = self.k_p * error_x
                 # Limit the angle change per update
-                delta_servo1 = max(-self.servo_step, min(self.servo_step, delta_servo1))
+                delta_servo1 = max(-self.servo_step,
+                                   min(self.servo_step, delta_servo1))
 
             # Check vertical (Motor0 first)
             if abs(error_y) > self.deadzone_y:
                 delta_servo0 = self.k_p * error_y
-                delta_servo0 = max(-self.servo_step, min(self.servo_step, delta_servo0))
+                delta_servo0 = max(-self.servo_step,
+                                   min(self.servo_step, delta_servo0))
 
             # Update servo angles
             new_servo1_angle = self.servo1_angle + delta_servo1
@@ -316,10 +327,12 @@ class FaceTrackingSystem:
                 self.servo0_angle = new_servo0_angle
 
             # Set servo angles considering deadzone
-            self.set_servo_angle_with_deadzone(1, new_servo1_angle, 'servo1')  # Horizontal servo
+            self.set_servo_angle_with_deadzone(
+                1, new_servo1_angle, 'servo1')  # Horizontal servo
             # If servo0_moved, we set servo0 angle:
             if servo0_moved:
-                self.set_servo_angle_with_deadzone(0, self.servo0_angle, 'servo0')
+                self.set_servo_angle_with_deadzone(
+                    0, self.servo0_angle, 'servo0')
             else:
                 # If servo0 not moved, we keep servo0 angle as is, and move arm
                 self.set_arm_angle_with_deadzone(new_arm_angle)
@@ -344,41 +357,51 @@ class FaceTrackingSystem:
             # Face ID 1 not detected, do not move servos
             pass
 
+        # Convert BGR to RGB for Qt
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         self.frame_count += 1
-        return frame
+        return rgb_frame
 
-    def run(self):
+    def run(self, frame_signal):
+        self.is_running = True
         prev_frame_time = time.time()
         fps = 0
 
         try:
-            while True:
+            while self.is_running:
                 current_time = time.time()
-                
                 elapsed = current_time - prev_frame_time
+
                 if elapsed < self.frame_time:
                     time.sleep(self.frame_time - elapsed)
                     current_time = time.time()
-                
+
                 frame = self.process_frame()
-                
+
                 if elapsed > 0:
                     new_fps = self.calculate_fps(current_time)
                     fps = fps * 0.9 + new_fps * 0.1 if fps > 0 else new_fps
-                
+
+                # Add FPS text to frame
                 cv2.putText(frame, f'FPS: {int(fps)}', (10, 30),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-                
-                # cv2.imshow("Face Tracking", frame)
+
+                # Convert frame to QImage and emit
+                height, width, channel = frame.shape
+                bytes_per_line = 3 * width
+                q_image = QImage(frame.data, width, height,
+                                 bytes_per_line, QImage.Format.Format_RGB888)
+                frame_signal.emit(q_image)
+
                 prev_frame_time = current_time
-                
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
 
         except KeyboardInterrupt:
             print("Program interrupted by user (Ctrl+C).")
         finally:
             self.cleanup()
+
+    def stop(self):
+        self.is_running = False
 
     def cleanup(self):
         # Move servos back to neutral positions smoothly
@@ -397,6 +420,6 @@ class FaceTrackingSystem:
         self.picam2.stop()
         cv2.destroyAllWindows()
 
-if __name__ == "__main__":
-    face_system = FaceTrackingSystem()
-    face_system.run()
+    # Add this method to get active faces for the UI
+    def get_active_faces(self):
+        return self.known_face_ids

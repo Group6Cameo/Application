@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QPushButton, QLabel,
                              QHBoxLayout, QComboBox)
 from PyQt6.QtCore import QThread, pyqtSignal, Qt, QTimer
 from PyQt6.QtGui import QImage, QPixmap
-from ..utils.motor_tracking_impr import FaceTrackingSystem
+from ..utils.new_tracking import FaceTrackingSystem
 from adafruit_servokit import ServoKit
 import time
 
