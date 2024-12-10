@@ -60,7 +60,7 @@ class FaceTrackingSystem:
         # Frame smself.kit.servo[0].set_pulse_width_range(400, 2600)
         self.kit.servo[1].set_pulse_width_range(400, 2600)
         self.kit.servo[2].set_pulse_width_range(400, 2600)
-        self.kit.servo[3].set_pulse_width_range(400, 2600)servo_kit
+        self.kit.servo[3].set_pulse_width_range(400, 2600)
 
         # Servo angles
         # Motor 1: Horizontal control (left-right), 90 is center
