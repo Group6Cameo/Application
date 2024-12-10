@@ -92,6 +92,7 @@ class MainWindow(QMainWindow):
 
         # Setup double-click event for screensaver
         self.screensaver_widget.mouseDoubleClickEvent = self.toggle_menu
+        self.calibration_widget.mouseDoubleClickEvent = self.toggle_menu
 
     def switch_screen(self, index):
         self.stacked_widget.setCurrentIndex(index)
