@@ -215,13 +215,6 @@ class FaceTrackingSystem:
 
         # Servo control for face ID 1
         if self.face_to_track in self.active_faces:
-            print("-------------")
-            print("active faces")
-            print(self.active_faces)
-            print("-----------")
-            print("to track")
-            print(self.active_faces.get(self.face_to_track))
-            print("-----------")
             data = self.active_faces.get(self.face_to_track)
             midpoint = data['midpoint']
             frame_center_x = frame.shape[1] // 2
