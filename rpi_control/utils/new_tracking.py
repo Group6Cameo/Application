@@ -20,26 +20,24 @@ def set_arm_position(kit, angle):
 class FaceTrackingSystem:
     def __init__(self, servo_kit):
         # Initialize camera
-        self.picam2 = Picamera2()
-        camera_config = self.picam2.create_video_configuration(
-            main={"size": (640, 480), "format": "RGB888"},
-            controls={"FrameRate": 30}
-        )
-        self.picam2.configure(camera_config)
-        self.picam2.start()
+        try:
+            self.picam2 = Picamera2()
+            camera_config = self.picam2.create_video_configuration(
+                main={"size": (640, 480), "format": "RGB888"},
+                controls={"FrameRate": 30}
+            )
+            self.picam2.configure(camera_config)
+            self.picam2.start()
+            time.sleep(0.1)  # Give camera time to initialize
+        except Exception as e:
+            print(f"Camera initialization error: {e}")
+            if hasattr(self, 'picam2'):
+                self.picam2.close()
+            raise
 
         # Initialize face detection and recognition models
         self.face_detector = dlib.get_frontal_face_detector()
-        self.shape_predictor = dlib.shape_predictor(
-            'rpi_control/utils/models/shape_predictor_68_face_landmarks.dat')
-
-        # Initialize tracking variables
-        self.known_face_encodings = []
-        self.known_face_ids = []
-        self.current_id = 1
-        self.active_faces = {}  # {face_id: {'encoding': encoding, 'last_seen': timestamp}}
-        self.face_to_track = 1
-
+        self.shape_predictor = dlib.shape_prPicamera2
         # Parameters
         self.recognition_threshold = 0.6
         self.process_every_n_frames = 3
@@ -67,7 +65,7 @@ class FaceTrackingSystem:
         # Servo angles
         # Motor 1: Horizontal control (left-right), 90 is center
         self.servo1_angle = 90
-        # Motor 0: Vertical partial control, 90 is center
+        # Motor 0: Vertical partial controlPicamera2, 90 is center
         self.servo0_angle = 90
         # Arm angle for motor 2 & 3: vertical extension, 90 is center
         self.arm_angle = 90
@@ -254,9 +252,7 @@ class FaceTrackingSystem:
 
         displayed_info.sort(key=lambda x: x[0])
         for face_id, x, y in displayed_info:
-            cv2.putText(frame, f'XY{face_id}: ({x},{y})',
-                        (10, y_offset),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
+            cv2.putText(frame, f'XY{face_id}: ({x},{y})', (10, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
             y_offset += 20
 
         # Servo control logic:
@@ -397,10 +393,11 @@ class FaceTrackingSystem:
 
                 prev_frame_time = current_time
 
+            self.cleanup()
+
         except KeyboardInterrupt:
             print("Program interrupted by user (Ctrl+C).")
-        finally:
-            self.cleanup()
+            
 
     def stop(self):
         self.is_running = False
@@ -419,7 +416,10 @@ class FaceTrackingSystem:
             self.set_arm_angle_with_deadzone(self.arm_angle)
             time.sleep(delay)
 
-        self.picam2.stop()
+        if hasattr(self, 'picam2'):
+            if self.picam2:
+                self.picam2.close()
+                self.picam2 = None
         cv2.destroyAllWindows()
 
     # Add this method to get active faces for the UI
