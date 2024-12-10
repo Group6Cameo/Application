@@ -7,6 +7,7 @@ from .widgets.network import NetworkConfigWidget
 from .widgets.face_tracking import FaceTrackingWidget
 from .widgets.calibration import CalibrationWidget
 from .widgets.camouflage import CamouflageWidget
+from .utils.brightness_manager import BrightnessManager
 
 
 class MenuWidget(QWidget):
@@ -36,6 +37,8 @@ class MenuWidget(QWidget):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.brightness_manager = BrightnessManager()
+        self.brightness_manager.start()
         self.initUI()
 
     def initUI(self):
@@ -81,7 +84,7 @@ class MainWindow(QMainWindow):
         self.menu_widget.screensaver_btn.clicked.connect(
             lambda: self.switch_screen(0))
         self.menu_widget.close_btn.clicked.connect(self.close_app)
-        
+
 
         # Add widgets to main layout
         main_layout.addWidget(self.menu_widget)
@@ -105,6 +108,7 @@ class MainWindow(QMainWindow):
         else:
             self.menu_widget.hide()
     def close_app(self):
+        self.brightness_manager.stop()
         sys.exit(0)
 
 
