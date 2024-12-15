@@ -19,18 +19,21 @@ setup(
         "scikit-learn",
         "face_recognition",
         "dlib",
-        "picamera2"
-    ],
-    entry_points={
+        "picamera2",
+        "fastapi",
+        "uvicorn[standard]",
+    entry_points = {
         'console_scripts': [
-            'rpi-control=rpi_control.main:main',
+            'rpi-control=rpi_control.launcher:main',
+            'rpi-control-gui=rpi_control.main:main',
+            'rpi-control-server=rpi_control.server:main',
         ],
     },
-    author="Your Name",
-    description="A Raspberry Pi control interface with network management and screensaver",
-    keywords="raspberry-pi, qt, wifi",
-    python_requires=">=3.7",
-    package_data={
+    author= "Your Name",
+    description= "A Raspberry Pi control interface with network management and screensaver",
+    keywords= "raspberry-pi, qt, wifi",
+    python_requires= ">=3.7",
+    package_data = {
         'rpi_control': ['assets/*'],
     },
 )
