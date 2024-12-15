@@ -13,3 +13,5 @@ scikit-learn
 face_recognition
 dlib
 picamera2
+fastapi
+uvicorn[standard]
