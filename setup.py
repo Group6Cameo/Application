@@ -29,8 +29,8 @@ setup(
             'rpi-control-server=rpi_control.server:main',
         ],
     },
-    author= "Your Name",
-    description= "A Raspberry Pi control interface with network management and screensaver",
+    author= "Montijn van den Beukel",
+    description= "A Raspberry Pi control interface for Cameo",
     keywords= "raspberry-pi, qt, wifi",
     python_requires= ">=3.7",
     package_data = {
