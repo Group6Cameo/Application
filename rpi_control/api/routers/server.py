@@ -1,6 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, Body, Query
-from app.core.security import get_api_key
-from app.services.vast_ai_service import VastAIService
+from rpi_control.api.services.vast_ai_service import VastAIService
 
 router = APIRouter(prefix="/server", tags=["server"])
 vast_service = VastAIService()
@@ -9,7 +8,6 @@ vast_service = VastAIService()
 @router.post("/start")
 async def start_server(
     body: dict = Body(...),
-    api_key: str = Depends(get_api_key)
 ):
     """Start a VastAI instance."""
     if not body.get("instance_id"):
@@ -23,7 +21,6 @@ async def start_server(
 @router.post("/stop")
 async def stop_server(
     body: dict = Body(...),
-    api_key: str = Depends(get_api_key)
 ):
     """Stop a VastAI instance."""
     if not body.get("instance_id"):
@@ -37,7 +34,6 @@ async def stop_server(
 @router.get("/status")
 async def server_status(
     instance_id: str = Query(...),
-    api_key: str = Depends(get_api_key)
 ):
     """Get the status of a VastAI instance."""
     if not instance_id:
@@ -50,7 +46,6 @@ async def server_status(
 
 @router.post("/create")
 async def create_server(
-    api_key: str = Depends(get_api_key)
 ):
     """Create a new VastAI instance."""
     result = await vast_service.create_instance()
