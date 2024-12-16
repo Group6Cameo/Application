@@ -8,6 +8,7 @@ Environment Variables Required:
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from rpi_control.api.routers import server
 import uvicorn
 import os
@@ -28,6 +29,9 @@ app.add_middleware(
     allow_methods=["*"],  # Allows all methods
     allow_headers=["*"],  # Allows all headers
 )
+
+# Mount static files directory
+app.mount("/static", StaticFiles(directory="rpi_control/static"), name="static")
 
 # Include routers
 app.include_router(server.router)

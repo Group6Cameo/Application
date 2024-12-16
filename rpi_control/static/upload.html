@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Image Upload</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .upload-form {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+        }
+        .preview {
+            max-width: 300px;
+            margin: 20px auto;
+        }
+        img {
+            max-width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <h1>Image Upload</h1>
+    <div class="upload-form">
+        <form id="uploadForm">
+            <input type="file" id="imageInput" accept="image/*" onchange="previewImage(event)">
+            <div class="preview">
+                <img id="preview" style="display: none;">
+            </div>
+            <button type="submit">Upload Image</button>
+        </form>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        function previewImage(event) {
+            const preview = document.getElementById('preview');
+            preview.src = URL.createObjectURL(event.target.files[0]);
+            preview.style.display = 'block';
+        }
+
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData();
+            const fileInput = document.getElementById('imageInput');
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/process-image', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                document.getElementById('result').innerHTML =
+                    `<p>Upload successful!</p>
+                     <p>Saved as: ${result.saved_as}</p>
+                     <p>Size: ${result.size} bytes</p>`;
+            } catch (error) {
+                document.getElementById('result').innerHTML =
+                    `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        });
+    </script>
+</body>
+</html>

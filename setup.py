@@ -35,6 +35,6 @@ setup(
     keywords="raspberry-pi, qt, wifi",
     python_requires=">=3.7",
     package_data={
-        'rpi_control': ['assets/*'],
+        'rpi_control': ['assets/*', 'static/*'],
     },
 )
