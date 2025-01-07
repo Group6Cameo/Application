@@ -107,7 +107,7 @@ async def process_image(
         # Prepare file for sending to backend
         try:
             form_data = aiohttp.FormData()
-            form_data.add_field('file',
+            form_data.add_field('image',
                                 open(upload_path, 'rb'),
                                 filename=unique_filename,
                                 content_type=file.content_type)
