@@ -41,7 +41,7 @@ app.include_router(server.router)
 # Add these constants near the top with other imports
 UPLOAD_DIR = Path("/tmp/cameo_uploads")
 ASSETS_DIR = Path("rpi_control/assets/camouflage")
-BACKEND_URL = "https://api.cameo-ai.com/generate-pattern"  # Placeholder URL
+BACKEND_URL = "http://213.5.130.78:29330/generate-camouflage"  # Placeholder URL
 
 # Ensure directories exist
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
