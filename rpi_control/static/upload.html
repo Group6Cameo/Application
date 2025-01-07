@@ -27,26 +27,56 @@
     <h1>Image Upload</h1>
     <div class="upload-form">
         <form id="uploadForm">
-            <input type="file" id="imageInput" accept="image/*" onchange="previewImage(event)">
+            <input type="file" id="imageInput" accept="image/*" required onchange="previewImage(event)">
             <div class="preview">
                 <img id="preview" style="display: none;">
             </div>
-            <button type="submit">Upload Image</button>
+            <button type="submit" id="submitButton">Upload Image</button>
         </form>
         <div id="result"></div>
+        <div id="loading" style="display: none;">Processing...</div>
     </div>
 
     <script>
         function previewImage(event) {
             const preview = document.getElementById('preview');
-            preview.src = URL.createObjectURL(event.target.files[0]);
+            const file = event.target.files[0];
+
+            if (!file) {
+                preview.style.display = 'none';
+                return;
+            }
+
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                alert('Please select an image file');
+                event.target.value = '';
+                preview.style.display = 'none';
+                return;
+            }
+
+            preview.src = URL.createObjectURL(file);
             preview.style.display = 'block';
         }
 
         document.getElementById('uploadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const formData = new FormData();
             const fileInput = document.getElementById('imageInput');
+            const submitButton = document.getElementById('submitButton');
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+
+            if (!fileInput.files[0]) {
+                result.innerHTML = `<p style="color: red;">Please select an image file</p>`;
+                return;
+            }
+
+            // Disable form while processing
+            submitButton.disabled = true;
+            loading.style.display = 'block';
+            result.innerHTML = '';
+
+            const formData = new FormData();
             formData.append('file', fileInput.files[0]);
 
             try {
@@ -54,14 +84,27 @@
                     method: 'POST',
                     body: formData
                 });
-                const result = await response.json();
-                document.getElementById('result').innerHTML =
-                    `<p>Upload successful!</p>
-                     <p>Saved as: ${result.saved_as}</p>
-                     <p>Size: ${result.size} bytes</p>`;
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Upload failed');
+                }
+
+                const data = await response.json();
+                result.innerHTML = `
+                    <p style="color: green;">✓ Upload successful!</p>
+                    <p>Saved as: ${data.saved_as}</p>
+                    <p>Size: ${data.size} bytes</p>
+                    <p>Pattern generated: ${data.pattern_path}</p>
+                `;
             } catch (error) {
-                document.getElementById('result').innerHTML =
-                    `<p style="color: red;">Error: ${error.message}</p>`;
+                result.innerHTML = `
+                    <p style="color: red;">Error: ${error.message}</p>
+                    <p>Please try again or contact support if the problem persists.</p>
+                `;
+            } finally {
+                submitButton.disabled = false;
+                loading.style.display = 'none';
             }
         });
     </script>

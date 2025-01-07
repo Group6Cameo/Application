@@ -19,3 +19,6 @@ vastai
 python-multipart
 qrcode
 pillow  # Required by qrcode
+aiohttp
+aiofile
+netifaces

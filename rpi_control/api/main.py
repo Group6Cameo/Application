@@ -15,6 +15,7 @@ import os
 from pathlib import Path
 import aiohttp
 import aiofiles
+import asyncio
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -56,48 +57,63 @@ async def root():
 
 @app.post("/process-image", tags=["ml"])
 async def process_image(
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
 ):
     """
     Process an uploaded image file through the ML model.
-
-    Workflow:
-    1. Save uploaded file locally
-    2. Send to backend server for processing
-    3. Save returned camouflage pattern
-    4. Return success response
-
-    Args:
-        file (UploadFile): The image file to process
-
-    Returns:
-        dict: Information about the processed file and generated pattern
-
-    Raises:
-        HTTPException: If there's an error in processing
     """
+    if not file:
+        raise HTTPException(
+            status_code=400,
+            detail="No file uploaded"
+        )
+
+    # Validate file type
+    if not file.content_type.startswith('image/'):
+        raise HTTPException(
+            status_code=400,
+            detail="File must be an image"
+        )
+
     try:
         # Generate unique filename for upload
-        file_extension = os.path.splitext(file.filename)[1]
+        file_extension = os.path.splitext(file.filename)[1].lower()
+        if file_extension not in ['.jpg', '.jpeg', '.png', '.gif']:
+            raise HTTPException(
+                status_code=400,
+                detail="Unsupported file type. Please upload JPG, PNG, or GIF"
+            )
+
         unique_filename = f"{file.filename.split('.')[0]}_{os.urandom(4).hex()}{file_extension}"
         upload_path = UPLOAD_DIR / unique_filename
 
         # Save uploaded file
-        contents = await file.read()
-        async with aiofiles.open(upload_path, "wb") as f:
-            await f.write(contents)
+        try:
+            contents = await file.read()
+            if len(contents) > 10 * 1024 * 1024:  # 10MB limit
+                raise HTTPException(
+                    status_code=400,
+                    detail="File size too large. Maximum size is 10MB"
+                )
+
+            async with aiofiles.open(upload_path, "wb") as f:
+                await f.write(contents)
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to save uploaded file: {str(e)}"
+            )
 
         # Prepare file for sending to backend
-        form_data = aiohttp.FormData()
-        form_data.add_field('file',
-                            open(upload_path, 'rb'),
-                            filename=unique_filename,
-                            content_type=file.content_type)
+        try:
+            form_data = aiohttp.FormData()
+            form_data.add_field('file',
+                                open(upload_path, 'rb'),
+                                filename=unique_filename,
+                                content_type=file.content_type)
 
-        # Send to backend server
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.post(BACKEND_URL, data=form_data) as response:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(BACKEND_URL, data=form_data, timeout=30) as response:
                     if response.status != 200:
                         raise HTTPException(
                             status_code=response.status,
@@ -106,15 +122,26 @@ async def process_image(
 
                     # Save the returned camouflage pattern
                     pattern_data = await response.read()
-                    pattern_path = ASSETS_DIR / "current.png"
+                    if not pattern_data:
+                        raise HTTPException(
+                            status_code=500,
+                            detail="Backend returned empty response"
+                        )
+
+                    pattern_path = ASSETS_DIR / f"pattern_{unique_filename}"
                     async with aiofiles.open(pattern_path, "wb") as f:
                         await f.write(pattern_data)
 
-            except aiohttp.ClientError as e:
-                raise HTTPException(
-                    status_code=503,
-                    detail=f"Error communicating with backend server: {str(e)}"
-                )
+        except aiohttp.ClientError as e:
+            raise HTTPException(
+                status_code=503,
+                detail=f"Error communicating with backend server: {str(e)}"
+            )
+        except asyncio.TimeoutError:
+            raise HTTPException(
+                status_code=504,
+                detail="Backend server timeout"
+            )
 
         return {
             "status": "success",
@@ -124,15 +151,24 @@ async def process_image(
             "size": len(contents)
         }
 
-    except Exception as e:
-        # Clean up uploaded file if it exists
-        if 'upload_path' in locals() and upload_path.exists():
-            upload_path.unlink()
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions as-is
 
+    except Exception as e:
+        # Log the error here (you should add proper logging)
+        print(f"Unexpected error: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"Error processing image: {str(e)}"
+            detail="An unexpected error occurred while processing the image"
         )
+
+    finally:
+        # Clean up uploaded file if it exists
+        if 'upload_path' in locals() and upload_path.exists():
+            try:
+                upload_path.unlink()
+            except Exception as e:
+                print(f"Failed to clean up temporary file: {str(e)}")
 
 if __name__ == "__main__":
     uvicorn.run("rpi_control.api.main:app",
