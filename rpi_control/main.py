@@ -1,13 +1,16 @@
 import sys
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QPushButton, QStackedWidget, QHBoxLayout, QFrame)
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 from .widgets.screensaver import ScreenSaverWidget
 from .widgets.network import NetworkConfigWidget
 from .widgets.face_tracking import FaceTrackingWidget
 from .widgets.calibration import CalibrationWidget
 from .widgets.camouflage import CamouflageWidget
 # from .utils.brightness_manager import BrightnessManager
+import glob
+import os
+from pathlib import Path
 
 
 class MenuWidget(QWidget):
@@ -39,6 +42,11 @@ class MainWindow(QMainWindow):
         super().__init__()
         # self.brightness_manager = BrightnessManager()
         # self.brightness_manager.start()
+        # Add pattern check timer
+        self.last_pattern_time = 0
+        self.pattern_check_timer = QTimer()
+        self.pattern_check_timer.timeout.connect(self.check_for_new_pattern)
+        self.pattern_check_timer.start(1000)  # Check every second
         self.initUI()
 
     def initUI(self):
@@ -92,9 +100,10 @@ class MainWindow(QMainWindow):
 
         self.setCentralWidget(main_widget)
 
-        # Setup double-click event for screensaver
+        # Setup double-click event for screensaver and camouflage
         self.screensaver_widget.mouseDoubleClickEvent = self.toggle_menu
         self.calibration_widget.mouseDoubleClickEvent = self.toggle_menu
+        self.camouflage_widget.mouseDoubleClickEvent = self.toggle_menu
 
     def switch_screen(self, index):
         self.stacked_widget.setCurrentIndex(index)
@@ -115,6 +124,19 @@ class MainWindow(QMainWindow):
         """Switch to camouflage view and refresh the display"""
         self.stacked_widget.setCurrentIndex(4)  # Index of camouflage widget
         self.camouflage_widget.load_latest_pattern()
+
+    def check_for_new_pattern(self):
+        """Check if a new pattern has been generated"""
+        pattern_dir = Path("rpi_control/assets/camouflage")
+        pattern_files = glob.glob(str(pattern_dir / "pattern_*"))
+
+        if pattern_files:
+            latest_pattern = max(pattern_files, key=os.path.getmtime)
+            latest_time = os.path.getmtime(latest_pattern)
+
+            if latest_time > self.last_pattern_time:
+                self.last_pattern_time = latest_time
+                self.switch_to_camouflage()
 
 
 def main():

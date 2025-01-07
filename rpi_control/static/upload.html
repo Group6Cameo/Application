@@ -93,9 +93,8 @@
                 const data = await response.json();
                 result.innerHTML = `
                     <p style="color: green;">✓ Upload successful!</p>
-                    <p>Saved as: ${data.saved_as}</p>
-                    <p>Size: ${data.size} bytes</p>
-                    <p>Pattern generated: ${data.pattern_path}</p>
+                    <p>Pattern has been generated and sent to the display.</p>
+                    <p>You can close this window now.</p>
                 `;
             } catch (error) {
                 result.innerHTML = `

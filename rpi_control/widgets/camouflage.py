@@ -11,10 +11,13 @@ class CamouflageWidget(QWidget):
     def __init__(self):
         super().__init__()
         layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)  # Remove all margins
+        layout.setSpacing(0)  # Remove spacing between widgets
 
         # Create image label
         self.image_label = QLabel()
         self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.image_label.setContentsMargins(0, 0, 0, 0)  # Remove label margins
         layout.addWidget(self.image_label)
 
         # Set dark green background (#002103)
@@ -22,6 +25,9 @@ class CamouflageWidget(QWidget):
         palette = self.palette()
         palette.setColor(QPalette.ColorRole.Window, QColor('#002103'))
         self.setPalette(palette)
+
+        # Remove any margins for the widget itself
+        self.setContentsMargins(0, 0, 0, 0)
 
         self.setLayout(layout)
 
@@ -36,14 +42,24 @@ class CamouflageWidget(QWidget):
         pattern_files = glob.glob(str(pattern_dir / "pattern_*"))
 
         if pattern_files:
-            # Get most recent file by modification time
             latest_pattern = max(pattern_files, key=os.path.getmtime)
             pixmap = QPixmap(latest_pattern)
 
-            # Scale pixmap to fit widget while maintaining aspect ratio
+            # Scale pixmap to fill the entire widget
             scaled_pixmap = pixmap.scaled(
                 self.size(),
-                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.AspectRatioMode.IgnoreAspectRatio,
                 Qt.TransformationMode.SmoothTransformation
             )
             self.image_label.setPixmap(scaled_pixmap)
+
+    def resizeEvent(self, event):
+        """Handle resize events to ensure the image stays fullscreen"""
+        super().resizeEvent(event)
+        self.load_latest_pattern()
+
+    def mouseDoubleClickEvent(self, event):
+        """Handle double click to toggle menu"""
+        # This will be connected to the main window's toggle_menu method
+        if hasattr(self.parent(), 'parent') and hasattr(self.parent().parent(), 'toggle_menu'):
+            self.parent().parent().toggle_menu(event)
