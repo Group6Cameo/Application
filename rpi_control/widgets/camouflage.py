@@ -10,15 +10,12 @@ import os
 class CamouflageWidget(QWidget):
     def __init__(self):
         super().__init__()
-        layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)  # Remove all margins
-        layout.setSpacing(0)  # Remove spacing between widgets
-
-        # Create image label
-        self.image_label = QLabel()
+        # Create layout without using QVBoxLayout
+        self.image_label = QLabel(self)
         self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.image_label.setContentsMargins(0, 0, 0, 0)  # Remove label margins
-        layout.addWidget(self.image_label)
+
+        # Ensure the label takes up the full space
+        self.image_label.setGeometry(0, 0, self.width(), self.height())
 
         # Set dark green background (#002103)
         self.setAutoFillBackground(True)
@@ -26,14 +23,15 @@ class CamouflageWidget(QWidget):
         palette.setColor(QPalette.ColorRole.Window, QColor('#002103'))
         self.setPalette(palette)
 
-        # Remove any margins for the widget itself
-        self.setContentsMargins(0, 0, 0, 0)
-
-        self.setLayout(layout)
-
     def showEvent(self, event):
         """Called when widget becomes visible"""
         super().showEvent(event)
+        self.load_latest_pattern()
+
+    def resizeEvent(self, event):
+        """Handle resize events to ensure the image stays fullscreen"""
+        super().resizeEvent(event)
+        self.image_label.setGeometry(0, 0, self.width(), self.height())
         self.load_latest_pattern()
 
     def load_latest_pattern(self):
@@ -47,19 +45,14 @@ class CamouflageWidget(QWidget):
 
             # Scale pixmap to fill the entire widget
             scaled_pixmap = pixmap.scaled(
-                self.size(),
+                self.width(),
+                self.height(),
                 Qt.AspectRatioMode.IgnoreAspectRatio,
                 Qt.TransformationMode.SmoothTransformation
             )
             self.image_label.setPixmap(scaled_pixmap)
 
-    def resizeEvent(self, event):
-        """Handle resize events to ensure the image stays fullscreen"""
-        super().resizeEvent(event)
-        self.load_latest_pattern()
-
     def mouseDoubleClickEvent(self, event):
         """Handle double click to toggle menu"""
-        # This will be connected to the main window's toggle_menu method
         if hasattr(self.parent(), 'parent') and hasattr(self.parent().parent(), 'toggle_menu'):
             self.parent().parent().toggle_menu(event)
