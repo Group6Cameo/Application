@@ -17,3 +17,5 @@ fastapi
 uvicorn[standard]
 vastai
 python-multipart
+qrcode
+pillow  # Required by qrcode
