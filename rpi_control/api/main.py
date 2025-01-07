@@ -78,7 +78,7 @@ async def process_image(
     try:
         # Generate unique filename for upload
         file_extension = os.path.splitext(file.filename)[1].lower()
-        if file_extension not in ['.jpg', '.jpeg', '.png', '.gif']:
+        if file_extension not in ['.jpg', '.jpeg', '.png']:
             raise HTTPException(
                 status_code=400,
                 detail="Unsupported file type. Please upload JPG, PNG, or GIF"
@@ -90,10 +90,10 @@ async def process_image(
         # Save uploaded file
         try:
             contents = await file.read()
-            if len(contents) > 10 * 1024 * 1024:  # 10MB limit
+            if len(contents) > 3 * 1024 * 1024:  # 3MB limit
                 raise HTTPException(
                     status_code=400,
-                    detail="File size too large. Maximum size is 10MB"
+                    detail="File size too large. Maximum size is 3MB"
                 )
 
             async with aiofiles.open(upload_path, "wb") as f:

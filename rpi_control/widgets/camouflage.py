@@ -1,16 +1,21 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPainter, QPixmap, QPalette, QColor
 import pkg_resources
+from pathlib import Path
+import glob
+import os
 
 
 class CamouflageWidget(QWidget):
     def __init__(self):
         super().__init__()
-        # Get the absolute path to the assets directory
-        assets_path = pkg_resources.resource_filename(
-            'rpi_control', 'assets/camouflage.png')
-        self.image = QPixmap(assets_path)
+        layout = QVBoxLayout()
+
+        # Create image label
+        self.image_label = QLabel()
+        self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.image_label)
 
         # Set dark green background (#002103)
         self.setAutoFillBackground(True)
@@ -18,20 +23,27 @@ class CamouflageWidget(QWidget):
         palette.setColor(QPalette.ColorRole.Window, QColor('#002103'))
         self.setPalette(palette)
 
-        # Remove any margins
-        self.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(layout)
 
-    def paintEvent(self, event):
-        painter = QPainter(self)
+    def showEvent(self, event):
+        """Called when widget becomes visible"""
+        super().showEvent(event)
+        self.load_latest_pattern()
 
-        # Ensure no antialiasing or other effects
-        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, False)
+    def load_latest_pattern(self):
+        """Load the most recently generated pattern"""
+        pattern_dir = Path("rpi_control/assets/camouflage")
+        pattern_files = glob.glob(str(pattern_dir / "pattern_*"))
 
-        # Fill background with dark green first
-        painter.fillRect(0, 0, self.width(), self.height(), QColor('#002103'))
+        if pattern_files:
+            # Get most recent file by modification time
+            latest_pattern = max(pattern_files, key=os.path.getmtime)
+            pixmap = QPixmap(latest_pattern)
 
-        # Scale and draw image
-        scaled_image = self.image.scaled(self.width(), self.height(),
-                                         Qt.AspectRatioMode.IgnoreAspectRatio,
-                                         Qt.TransformationMode.FastTransformation)
-        painter.drawPixmap(0, 0, scaled_image)
+            # Scale pixmap to fit widget while maintaining aspect ratio
+            scaled_pixmap = pixmap.scaled(
+                self.size(),
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            )
+            self.image_label.setPixmap(scaled_pixmap)

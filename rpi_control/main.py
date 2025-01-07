@@ -85,7 +85,6 @@ class MainWindow(QMainWindow):
             lambda: self.switch_screen(0))
         self.menu_widget.close_btn.clicked.connect(self.close_app)
 
-
         # Add widgets to main layout
         main_layout.addWidget(self.menu_widget)
         main_layout.addWidget(self.stacked_widget)
@@ -107,9 +106,15 @@ class MainWindow(QMainWindow):
             self.menu_widget.show()
         else:
             self.menu_widget.hide()
+
     def close_app(self):
         self.brightness_manager.stop()
         sys.exit(0)
+
+    def switch_to_camouflage(self):
+        """Switch to camouflage view and refresh the display"""
+        self.stacked_widget.setCurrentIndex(4)  # Index of camouflage widget
+        self.camouflage_widget.load_latest_pattern()
 
 
 def main():
