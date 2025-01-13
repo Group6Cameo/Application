@@ -1,0 +1,2 @@
+[console_scripts]
+rpi-control = rpi_control.main:main
