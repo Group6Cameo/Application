@@ -4,6 +4,8 @@ import multiprocessing
 import uvicorn
 from pathlib import Path
 import logging
+from pyngrok import ngrok
+from rpi_control.utils.network_info import set_ngrok_url
 
 logger = logging.getLogger(__name__)
 
@@ -17,14 +19,34 @@ def ensure_venv():
 
 
 def run_api():
-    """Run the FastAPI server"""
+    """Run the FastAPI server with ngrok tunnel"""
     from rpi_control.api.main import app
+
+    # Get ngrok auth token from environment variable or use a default one
+    ngrok_token = os.getenv('NGROK_AUTH_TOKEN')
+    if ngrok_token:
+        ngrok.set_auth_token(ngrok_token)
+
+    # Start ngrok tunnel
+    try:
+        public_url = ngrok.connect(8000).public_url
+        logger.info(f"Public URL: {public_url}")
+        set_ngrok_url(public_url)
+    except Exception as e:
+        logger.error(f"Failed to create ngrok tunnel: {str(e)}")
+        public_url = None
+
+    # Run the FastAPI app
     uvicorn.run(
         app,
         host="0.0.0.0",
         port=8000,
         log_level="info"
     )
+
+    # Cleanup ngrok on exit
+    if public_url:
+        ngrok.disconnect(public_url)
 
 
 def run_gui():

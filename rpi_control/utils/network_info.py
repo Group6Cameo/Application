@@ -1,5 +1,23 @@
+from typing import Optional
 import socket
 import netifaces
+
+# Global variable to store the ngrok URL
+_ngrok_url: Optional[str] = None
+
+
+def set_ngrok_url(url: str):
+    """Set the current ngrok URL"""
+    global _ngrok_url
+    _ngrok_url = url
+
+
+def get_public_url():
+    """Get the ngrok URL if available, otherwise return local URL"""
+    global _ngrok_url
+    if _ngrok_url:
+        return _ngrok_url
+    return f"http://{get_ip_address()}:8000"
 
 
 def get_ip_address():

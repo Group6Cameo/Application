@@ -3,7 +3,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPainter, QPixmap, QPalette, QColor
 import pkg_resources
 import qrcode
-from ..utils.network_info import get_ip_address
+from ..utils.network_info import get_ip_address, get_public_url
 from PyQt6.QtWidgets import QDialog
 
 
@@ -69,8 +69,7 @@ class CalibrationWidget(QWidget):
         self.setLayout(layout)
 
     def show_qr_code(self):
-        ip_address = get_ip_address()
-        url = f"http://{ip_address}:8000/static/upload.html"
+        url = f"{get_public_url()}/static/upload.html"
         dialog = QRDialog(url)
         dialog.exec()
 

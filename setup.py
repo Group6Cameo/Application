@@ -22,6 +22,7 @@ setup(
         "picamera2",
         "fastapi",
         "uvicorn[standard]",
+        "pyngrok",
     ],
     entry_points={
         'console_scripts': [
