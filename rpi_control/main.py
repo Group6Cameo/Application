@@ -7,6 +7,7 @@ from .widgets.network import NetworkConfigWidget
 from .widgets.face_tracking import FaceTrackingWidget
 from .widgets.calibration import CalibrationWidget
 from .widgets.camouflage import CamouflageWidget
+from .widgets.brightness_overlay import BrightnessOverlay, BrightnessControls
 # from .utils.brightness_manager import BrightnessManager
 import glob
 import os
@@ -104,6 +105,24 @@ class MainWindow(QMainWindow):
         self.screensaver_widget.mouseDoubleClickEvent = self.toggle_menu
         self.calibration_widget.mouseDoubleClickEvent = self.toggle_menu
         self.camouflage_widget.mouseDoubleClickEvent = self.toggle_menu
+
+        # Add brightness overlay
+        self.brightness_overlay = BrightnessOverlay(self)
+        self.brightness_controls = BrightnessControls(self.brightness_overlay)
+
+        # Add brightness controls to the menu
+        self.menu_widget.layout().insertWidget(
+            self.menu_widget.layout().count() - 1,  # Insert before the stretch
+            self.brightness_controls
+        )
+
+        # Make sure overlay covers the entire window
+        self.resizeEvent = self.onResize
+
+    def onResize(self, event):
+        if hasattr(self, 'brightness_overlay'):
+            self.brightness_overlay.setGeometry(self.rect())
+        super().resizeEvent(event)
 
     def switch_screen(self, index):
         self.stacked_widget.setCurrentIndex(index)
