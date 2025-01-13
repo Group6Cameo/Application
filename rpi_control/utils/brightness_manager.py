@@ -22,7 +22,7 @@ class BrightnessManager:
         while self.is_running:
             try:
                 # Read sensor values
-                _, _, _, c = self.sensor.color_data  # Only need the clear value
+                r, g, b, c = self.sensor.color_data  # Only need the clear value
 
                 # Map clear value to brightness percentage (0-100)
                 brightness_percent = min(max((c / 65535) * 100, 0), 100)
@@ -31,10 +31,10 @@ class BrightnessManager:
                 self.set_screen_brightness(brightness_percent)
 
                 # Print values
-                print(f"Clear: {c}, Brightness: {brightness_percent:.1f}%")
+                print(f"Clear: {r, g, b, c}, Brightness: {brightness_percent:.1f}%")
                 print("-" * 50)
 
-                time.sleep(5)
+                time.sleep(0.1)
 
             except Exception as e:
                 print(f"Error reading sensor: {e}")

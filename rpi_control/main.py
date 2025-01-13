@@ -8,7 +8,7 @@ from .widgets.face_tracking import FaceTrackingWidget
 from .widgets.calibration import CalibrationWidget
 from .widgets.camouflage import CamouflageWidget
 from .widgets.brightness_overlay import BrightnessOverlay, BrightnessControls
-# from .utils.brightness_manager import BrightnessManager
+from .utils.brightness_manager import BrightnessManager
 import glob
 import os
 from pathlib import Path
@@ -41,8 +41,8 @@ class MenuWidget(QWidget):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        # self.brightness_manager = BrightnessManager()
-        # self.brightness_manager.start()
+        self.brightness_manager = BrightnessManager()
+        self.brightness_manager.start()
         # Add pattern check timer
         self.last_pattern_time = 0
         self.pattern_check_timer = QTimer()
