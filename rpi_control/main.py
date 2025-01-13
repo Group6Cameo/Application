@@ -42,13 +42,17 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.brightness_manager = BrightnessManager()
+        self.initUI()
+        # Connect brightness manager to overlay after initUI creates it
+        self.brightness_manager.brightness_changed.connect(
+            self.brightness_overlay.setBrightness
+        )
         self.brightness_manager.start()
         # Add pattern check timer
         self.last_pattern_time = 0
         self.pattern_check_timer = QTimer()
         self.pattern_check_timer.timeout.connect(self.check_for_new_pattern)
         self.pattern_check_timer.start(1000)  # Check every second
-        self.initUI()
 
     def initUI(self):
         self.setWindowTitle('Raspberry Pi Control')

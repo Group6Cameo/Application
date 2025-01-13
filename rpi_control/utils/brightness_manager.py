@@ -2,10 +2,16 @@ from threading import Thread
 import time
 import board
 import adafruit_apds9960.apds9960
-import os
+from PyQt6.QtCore import QObject, pyqtSignal
 
-class BrightnessManager:
-    def __init__(self):
+
+class BrightnessManager(QObject):
+    brightness_changed = pyqtSignal(int)
+
+    def __init__(self, brightness_overlay=None):
+        super().__init__()
+        self.brightness_overlay = brightness_overlay
+
         # Initialize I2C and APDS9960 sensor
         i2c = board.I2C()
         self.sensor = adafruit_apds9960.apds9960.APDS9960(i2c)
@@ -22,34 +28,19 @@ class BrightnessManager:
         while self.is_running:
             try:
                 # Read sensor values
-                r, g, b, c = self.sensor.color_data  # Only need the clear value
+                r, g, b, c = self.sensor.color_data
 
                 # Map clear value to brightness percentage (0-100)
                 brightness_percent = min(max((c / 65535) * 100, 0), 100)
 
-                # Set screen brightness
-                self.set_screen_brightness(brightness_percent)
-
-                # Print values
-                print(f"Clear: {r, g, b, c}, Brightness: {brightness_percent:.1f}%")
-                print("-" * 50)
+                # Emit the brightness change signal
+                self.brightness_changed.emit(int(brightness_percent))
 
                 time.sleep(0.1)
 
             except Exception as e:
                 print(f"Error reading sensor: {e}")
-                time.sleep(5)  # Wait before retrying
-
-    def set_screen_brightness(self, brightness_percent):
-        # Convert percentage to integer (0-100)
-        brightness_value = int(brightness_percent)
-
-        # Set the brightness using brightnessctl
-        try:
-            print(f"Setting screen brightness to {brightness_value}%")
-            os.system(f"brightnessctl set {brightness_value}%")
-        except Exception as e:
-            print(f"Error setting screen brightness: {e}")
+                time.sleep(5)
 
     def start(self):
         """Start the monitoring thread"""
