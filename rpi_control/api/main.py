@@ -35,8 +35,6 @@ app.add_middleware(
 # Mount static files directory
 app.mount("/static", StaticFiles(directory="rpi_control/static"), name="static")
 
-# Include routers
-app.include_router(server.router)
 
 # Add these constants near the top with other imports
 UPLOAD_DIR = Path("/tmp/cameo_uploads")
