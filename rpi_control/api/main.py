@@ -109,7 +109,7 @@ async def process_image(
                                 content_type=file.content_type)
 
             async with aiohttp.ClientSession() as session:
-                async with session.get(BACKEND_URL, data=form_data, timeout=30) as response:
+                async with session.get(BACKEND_URL, data=form_data, timeout=60) as response:
                     if response.status != 200:
                         raise HTTPException(
                             status_code=response.status,
