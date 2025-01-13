@@ -31,12 +31,11 @@ class BrightnessManager(QObject):
                 r, g, b, c = self.sensor.color_data
 
                 # Add base brightness (30%) and adjust scaling
-                BASE_BRIGHTNESS = 30
-                SCALE_FACTOR = 0.3  # Adjust this to make it more sensitive
+                BASE_BRIGHTNESS = 20
 
                 # Map clear value to additional brightness (0-60%)
                 additional_brightness = min(
-                    max((c / 65535) * 100 * SCALE_FACTOR, 0), 60)
+                    max((c / 6000) * 100, 0), 60)
 
                 # Combine base and additional brightness
                 total_brightness = BASE_BRIGHTNESS + additional_brightness
