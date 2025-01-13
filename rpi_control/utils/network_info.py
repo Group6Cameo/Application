@@ -1,21 +1,34 @@
-from typing import Optional
+import os
+from pathlib import Path
 import socket
 import netifaces
 
-# Global variable to store the ngrok URL
-_ngrok_url: Optional[str] = None
+# File to store ngrok URL
+NGROK_URL_FILE = "/tmp/ngrok_url.txt"
 
 
 def set_ngrok_url(url: str):
     """Set the current ngrok URL"""
-    global _ngrok_url
-    _ngrok_url = url
+    try:
+        with open(NGROK_URL_FILE, "w") as f:
+            f.write(url)
+    except Exception as e:
+        print(f"Failed to save ngrok URL: {e}")
 
 
 def get_public_url():
     """Get the ngrok URL if available, otherwise return local URL"""
-    global _ngrok_url
-    return _ngrok_url
+    try:
+        if os.path.exists(NGROK_URL_FILE):
+            with open(NGROK_URL_FILE, "r") as f:
+                url = f.read().strip()
+                if url:
+                    return url
+    except Exception as e:
+        print(f"Failed to read ngrok URL: {e}")
+
+    # Fallback to local URL
+    return f"http://{get_ip_address()}:8000"
 
 
 def get_ip_address():
@@ -45,8 +58,10 @@ def get_ip_address():
 def print_network_info():
     """Print network information for connecting to the API"""
     ip = get_ip_address()
+    public_url = get_public_url()
     print("\n" + "="*50)
     print("Network Information:")
-    print(f"API is available at: http://{ip}:8000")
+    print(f"Local API: http://{ip}:8000")
+    print(f"Public URL: {public_url}")
     print(f"API documentation: http://{ip}:8000/docs")
     print("="*50 + "\n")
