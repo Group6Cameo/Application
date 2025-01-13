@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 import socket
 import netifaces
@@ -12,6 +11,7 @@ def set_ngrok_url(url: str):
     try:
         with open(NGROK_URL_FILE, "w") as f:
             f.write(url)
+            print(f"Saved ngrok URL to {NGROK_URL_FILE}")
     except Exception as e:
         print(f"Failed to save ngrok URL: {e}")
 
@@ -19,7 +19,7 @@ def set_ngrok_url(url: str):
 def get_public_url():
     """Get the ngrok URL if available, otherwise return local URL"""
     try:
-        if os.path.exists(NGROK_URL_FILE):
+        if Path(NGROK_URL_FILE).exists():
             with open(NGROK_URL_FILE, "r") as f:
                 url = f.read().strip()
                 if url:
