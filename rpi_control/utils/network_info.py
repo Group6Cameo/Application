@@ -20,14 +20,17 @@ def get_public_url():
     """Get the ngrok URL if available, otherwise return local URL"""
     try:
         if Path(NGROK_URL_FILE).exists():
+            print("Using ngrok URL")
             with open(NGROK_URL_FILE, "r") as f:
                 url = f.read().strip()
                 if url:
+                    print(f"Using ngrok URL: {url}")
                     return url
     except Exception as e:
         print(f"Failed to read ngrok URL: {e}")
 
     # Fallback to local URL
+    print("Using local URL")
     return f"http://{get_ip_address()}:8000"
 
 
