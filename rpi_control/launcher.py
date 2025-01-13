@@ -30,7 +30,6 @@ def run_api():
     # Start ngrok tunnel
     try:
         public_url = ngrok.connect(8000).public_url
-        logger.info(f"Public URL: {public_url}")
         set_ngrok_url(public_url)
     except Exception as e:
         logger.error(f"Failed to create ngrok tunnel: {str(e)}")

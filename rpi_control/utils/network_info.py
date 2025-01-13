@@ -15,9 +15,7 @@ def set_ngrok_url(url: str):
 def get_public_url():
     """Get the ngrok URL if available, otherwise return local URL"""
     global _ngrok_url
-    if _ngrok_url:
-        return _ngrok_url
-    return f"http://{get_ip_address()}:8000"
+    return _ngrok_url
 
 
 def get_ip_address():
