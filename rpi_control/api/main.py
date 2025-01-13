@@ -9,7 +9,6 @@ Environment Variables Required:
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from rpi_control.api.routers import server
 import uvicorn
 import os
 from pathlib import Path
