@@ -1,14 +1,181 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QPushButton, QLabel,
-                             QHBoxLayout, QComboBox)
+                             QHBoxLayout, QComboBox, QSizePolicy)
 from PyQt6.QtCore import QThread, pyqtSignal, Qt, QTimer
 from PyQt6.QtGui import QImage, QPixmap
-from ..utils.new_tracking import FaceTrackingSystem
 from adafruit_servokit import ServoKit
+import cv2
 import time
+import csv
+import subprocess
+import os
+import zmq
+import json
+
+# Constants from tracking_motors.py
+IMAGE_WIDTH = 640
+IMAGE_HEIGHT = 480  # Changed to match camera resolution
+INITIAL_SERVO0_ANGLE = 120
+INITIAL_SERVO1_ANGLE = 95
+INITIAL_ARM_ANGLE = 90
+DEADZONE_X = 60
+DEADZONE_Y = 40
+K_P = 0.5
+SERVO_STEP = 1.5
+CSV_PATH = 'tmp/face_info_log.csv'
+
+class MotorTrackingSystem:
+    def __init__(self, servo_kit):
+        # Get the absolute path to the project root directory
+        self.project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        
+        # Initialize servo positions and angles
+        self.servo0_angle = INITIAL_SERVO0_ANGLE
+        self.servo1_angle = INITIAL_SERVO1_ANGLE
+        self.arm_angle = INITIAL_ARM_ANGLE
+        
+        # Set initial positions
+        self.kit = servo_kit
+        self.kit.servo[0].angle = self.servo0_angle
+        self.kit.servo[1].angle = self.servo1_angle
+        self.set_arm_position(self.arm_angle)
+
+        # Tracking variables
+        self.is_running = False
+        self.face_to_track = 1  # Default face ID
+        
+        # Deadzone settings
+        self.deadzones = {
+            'servo0': (999, -1),
+            'servo1': (999, -1),
+            'arm': (999, -1)
+        }
+
+        # Process handlers
+        self.tracking_process = None
+        self.monitor_process = None
+
+        # Create target face file if it doesn't exist
+        target_file = os.path.join(self.project_root, 'tmp', 'target_face.txt')
+        os.makedirs(os.path.join(self.project_root, 'tmp'), exist_ok=True)
+        if not os.path.exists(target_file):
+            with open(target_file, 'w') as f:
+                f.write('1')  # Default face ID
+
+    def in_deadzone(self, angle, deadzone):
+        dz_min, dz_max = deadzone
+        if dz_min <= dz_max:
+            return dz_min <= angle <= dz_max
+        return False
+
+    def set_servo_angle_with_deadzone(self, servo_index, angle, deadzone_key):
+        angle = max(0, min(180, angle))
+        if not self.in_deadzone(angle, self.deadzones[deadzone_key]):
+            self.kit.servo[servo_index].angle = angle
+
+    def set_arm_angle_with_deadzone(self, angle):
+        angle = max(0, min(180, angle))
+        if not self.in_deadzone(angle, self.deadzones['arm']):
+            self.set_arm_position(angle)
+
+    def set_arm_position(self, angle):
+        if angle < 0 or angle > 180:
+            raise ValueError("Angle must be between 0 and 180 degrees.")
+        self.kit.servo[3].angle = angle
+        self.kit.servo[2].angle = 180 - angle
+
+    def start_tracking_motors(self):
+        # Get the utils directory path
+        utils_dir = os.path.join(self.project_root, 'rpi_control', 'utils')
+        
+        # Start the monitor_detections.py script first
+        monitor_script = os.path.join(utils_dir, 'monitor_detections.py')
+        print(f"Starting monitor_detections.py from: {monitor_script}")
+        self.monitor_process = subprocess.Popen(['python3', monitor_script], cwd=utils_dir)
+        time.sleep(2)  # Give monitor_detections time to start
+        
+        # Then start tracking_motors.py
+        tracking_script = os.path.join(utils_dir, 'tracking_motors.py')
+        print(f"Starting tracking_motors.py from: {tracking_script}")
+        self.tracking_process = subprocess.Popen(['python3', tracking_script], cwd=utils_dir)
+        
+        # Update TARGET_GALLERY_ID in tracking_motors
+        if hasattr(self, 'face_to_track'):
+            target_file = os.path.join(self.project_root, 'tmp', 'target_face.txt')
+            with open(target_file, 'w') as f:
+                f.write(str(self.face_to_track))
+
+    def stop_tracking_motors(self):
+        try:
+            # Kill tracking Python processes
+            subprocess.run(['pkill', '-f', 'tracking_motors.py'], check=False)
+            subprocess.run(['pkill', '-f', 'monitor_detections.py'], check=False)
+                
+            # Kill GStreamer pipeline processes
+            subprocess.run(['pkill', '-f', 'gst-launch-1.0'], check=False)
+            subprocess.run(['pkill', '-f', 'libcamerasrc'], check=False)
+                
+            # Clean up process references
+            if self.tracking_process:
+                self.tracking_process = None
+            if self.monitor_process:
+                self.monitor_process = None
+                    
+            print("Successfully stopped all tracking and camera processes")
+                
+        except Exception as e:
+            print(f"Error stopping processes: {e}")
+
+    def run(self, frame_signal):
+        self.is_running = True
+        self.start_tracking_motors()
+        
+        while self.is_running:
+            time.sleep(0.1)  # Keep the thread alive
+
+    def stop(self):
+        self.is_running = False
+        self.stop_tracking_motors()
+
+    def cleanup(self):
+        self.stop_tracking_motors()
+        # Move servos back to neutral positions smoothly
+        target0, target1, targetA = 90, 90, 90
+        steps = 10
+        delay = 0.01
+
+        for i in range(steps):
+            self.servo0_angle += (target0 - self.servo0_angle) / (steps - i)
+            self.servo1_angle += (target1 - self.servo1_angle) / (steps - i)
+            self.arm_angle += (targetA - self.arm_angle) / (steps - i)
+            
+            self.set_servo_angle_with_deadzone(0, self.servo0_angle, 'servo0')
+            self.set_servo_angle_with_deadzone(1, self.servo1_angle, 'servo1')
+            self.set_arm_angle_with_deadzone(self.arm_angle)
+            time.sleep(delay)
+
+    def get_active_faces(self):
+        """Read unique gallery IDs from CSV, excluding 'nd' values"""
+        try:
+            csv_path = os.path.join(self.project_root, 'tmp', 'face_info_log.csv')
+            with open(csv_path, 'r') as f:
+                rows = list(csv.reader(f))[1:]  # Skip header
+                # Get unique gallery IDs, excluding 'nd', directly from rows
+                face_ids = set(row[3] for row in rows if len(row) > 3 and row[3] != 'nd')
+                if face_ids:  # Only process if there are valid IDs
+                    # Convert to integers and sort
+                    return sorted([int(id) for id in face_ids if id.isdigit()])
+                else:
+                    return [0]  # Return default face ID if no valid IDs
+        except Exception as e:
+            # Silently handle file not found error
+            if isinstance(e, FileNotFoundError):
+                return [1]
+            # Print other errors
+            print(f"Error reading face IDs: {e}")
+            return [0]  # Return default face ID if reading fails
 
 
 class FaceTrackingWorker(QThread):
-    frame_ready = pyqtSignal(QImage)
     finished = pyqtSignal()
 
     def __init__(self, face_tracker):
@@ -16,19 +183,23 @@ class FaceTrackingWorker(QThread):
         self.face_tracker = face_tracker
 
     def run(self):
-        self.face_tracker.run(self.frame_ready)
+        self.face_tracker.run(None)
         self.finished.emit()
 
 
 class FaceTrackingWidget(QWidget):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        # Add project root path
+        self.project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        
         layout = QVBoxLayout()
 
-        # Create video display label
-        self.video_label = QLabel()
-        self.video_label.setMinimumSize(640, 480)
-        self.video_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # Add spacer to keep buttons at bottom
+        spacer = QWidget()
+        spacer.setMinimumHeight(400)  # Adjust height as needed
+        spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        layout.addWidget(spacer)
 
         # Create button layout
         button_layout = QHBoxLayout()
@@ -43,16 +214,12 @@ class FaceTrackingWidget(QWidget):
         # Add face selection combo box
         self.face_select = QComboBox()
         self.face_select.currentIndexChanged.connect(self.change_tracked_face)
-        self.update_faces_timer = QTimer()
-        self.update_faces_timer.timeout.connect(self.update_face_list)
-        self.update_faces_timer.setInterval(1000)  # Update every second
 
         button_layout.addWidget(QLabel("Track Face:"))
         button_layout.addWidget(self.face_select)
         button_layout.addWidget(self.start_button)
         button_layout.addWidget(self.stop_button)
 
-        layout.addWidget(self.video_label)
         layout.addLayout(button_layout)
         self.setLayout(layout)
 
@@ -67,22 +234,78 @@ class FaceTrackingWidget(QWidget):
         self.face_tracker = None
         self.worker = None
 
-    def update_frame(self, qimage):
-        self.video_label.setPixmap(QPixmap.fromImage(qimage))
+        # Add ZMQ context for receiving face IDs
+        self.zmq_context = zmq.Context()
+        self.face_ids_socket = self.zmq_context.socket(zmq.SUB)
+        self.face_ids_socket.connect("tcp://localhost:5556")  # Use a different port
+        self.face_ids_socket.setsockopt_string(zmq.SUBSCRIBE, "")
+        
+        # Timer for updating face list
+        self.update_timer = QTimer()
+        self.update_timer.timeout.connect(self.update_face_list)
+        
+        self.retry_count = 0
+        self.max_retries = 5
+
+        # Connect face selection change signal
+        self.face_select.currentTextChanged.connect(self.on_face_selection_changed)
+
+        self.is_tracking = False  # Add tracking state flag
 
     def update_face_list(self):
-        if self.face_tracker:
-            current_faces = self.face_tracker.get_active_faces()
-            current_text = self.face_select.currentText()
+        # Only try to update if tracking is active
+        if not self.is_tracking:
+            return
 
-            self.face_select.clear()
-            self.face_select.addItems([f"Face {id}" for id in current_faces])
+        try:
+            if self.face_ids_socket.poll(50):
+                data = self.face_ids_socket.recv_string()
+                unique_ids = json.loads(data)
+                
+                if unique_ids:
+                    current_text = self.face_select.currentText()
+                    self.face_select.clear()
+                    self.face_select.addItems([str(id) for id in sorted(unique_ids)])
+                    
+                    if current_text:
+                        index = self.face_select.findText(current_text)
+                        if index >= 0:
+                            self.face_select.setCurrentIndex(index)
+                    
+                    self.retry_count = 0
+                else:
+                    self.handle_empty_ids()
+            else:
+                self.handle_empty_ids()
+                
+        except Exception as e:
+            print(f"Error in update_face_list: {e}")
+            self.handle_empty_ids()
 
-            # Try to maintain the previous selection if possible
-            if current_text:
-                index = self.face_select.findText(current_text)
-                if index >= 0:
-                    self.face_select.setCurrentIndex(index)
+    def handle_empty_ids(self):
+        """Handle cases where no IDs are received"""
+        if not self.is_tracking:
+            return
+
+        self.retry_count += 1
+        if self.retry_count >= self.max_retries:
+            print("Retrying ZMQ connection...")
+            self.reinit_zmq_connection()
+            self.retry_count = 0
+
+    def reinit_zmq_connection(self):
+        """Reinitialize ZMQ connection if needed"""
+        try:
+            # Close existing connection
+            self.face_ids_socket.close()
+            
+            # Create new connection
+            self.face_ids_socket = self.zmq_context.socket(zmq.SUB)
+            self.face_ids_socket.connect("tcp://localhost:5556")
+            self.face_ids_socket.setsockopt_string(zmq.SUBSCRIBE, "")
+            print("ZMQ connection reinitialized")
+        except Exception as e:
+            print(f"Error reinitializing ZMQ connection: {e}")
 
     def change_tracked_face(self, index):
         if self.face_tracker and index >= 0:
@@ -92,28 +315,43 @@ class FaceTrackingWidget(QWidget):
     def start_tracking(self):
         # Create a new face tracker instance if needed
         if not self.face_tracker:
-            self.face_tracker = FaceTrackingSystem(self.kit)
+            self.face_tracker = MotorTrackingSystem(self.kit)
 
         self.worker = FaceTrackingWorker(self.face_tracker)
-        self.worker.frame_ready.connect(self.update_frame)
         self.worker.finished.connect(self.on_tracking_finished)
         self.worker.start()
 
-        # Start the face list update timer
-        self.update_faces_timer.start()
+        # Set tracking flag and start timer
+        self.is_tracking = True
+        self.retry_count = 0
+        self.update_timer.start(100)
 
         # Update button states
         self.start_button.setEnabled(False)
         self.stop_button.setEnabled(True)
 
     def stop_tracking(self):
+        # Update tracking state first
+        self.is_tracking = False
+        
+        # Stop the timer
+        self.update_timer.stop()
+        
+        # Clear retry count
+        self.retry_count = 0
+        
+        # Clear the face selection combo box
+        self.face_select.clear()
+        
+        if self.face_tracker:
+            self.face_tracker.stop_tracking_motors()
+        
         if self.worker and self.worker.isRunning():
             self.face_tracker.stop()
             self.worker.wait()
-            self.video_label.clear()
 
             # Stop the face list update timer
-            self.update_faces_timer.stop()
+            self.update_timer.stop()
             self.face_select.clear()
 
             # Clean up the face tracker
@@ -138,3 +376,36 @@ class FaceTrackingWidget(QWidget):
         self.start_button.setEnabled(True)
         self.stop_button.setEnabled(False)
         print("Face tracking has completed.")
+
+    def on_face_selection_changed(self, text):
+        """Handle face ID selection change"""
+        try:
+            if not text:  # Handle empty selection
+                return
+                
+            # 直接使用选择的数字ID
+            face_id = text  # 不再需要分割字符串
+            
+            # Write the new target face ID to file
+            target_file = os.path.join(self.project_root, 'tmp', 'target_face.txt')
+            os.makedirs(os.path.dirname(target_file), exist_ok=True)  # 确保目录存在
+            with open(target_file, 'w') as f:
+                f.write(face_id)
+            
+            print(f"Updated target face ID to: {face_id}")
+            
+            # Update the tracker's target face if it exists
+            if hasattr(self, 'face_tracker') and self.face_tracker:
+                self.face_tracker.face_to_track = int(face_id)
+                
+        except Exception as e:
+            print(f"Error updating target face ID: {e}")
+            import traceback
+            traceback.print_exc()
+
+    def cleanup(self):
+        """Called when widget is being closed"""
+        self.is_tracking = False
+        self.update_timer.stop()
+        if hasattr(self, 'face_ids_socket'):
+            self.face_ids_socket.close()

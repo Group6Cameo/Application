@@ -23,3 +23,5 @@ aiohttp
 aiofile
 netifaces
 pyngrok
+python3-xlib
+xdotool
