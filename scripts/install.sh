@@ -17,7 +17,5 @@ wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-arm64.tgz
 sudo tar xvzf ./ngrok-v3-stable-linux-arm64.tgz -C /usr/local/bin
 ngrok authtoken 2rZfVcXwEHVl8HlEft8imU7bvUL_3xnAT1AaKtUnNMdGzjTx1
 
-sudo apt-get install python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-gstreamer-1.0 gir1.2-gst-plugins-base-1.0
-
 echo "Installation complete! The application will start on next boot."
 echo "To start now without rebooting, run: sudo systemctl start rpi-control"
