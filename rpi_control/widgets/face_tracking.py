@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QPushButton, QLabel,
                              QHBoxLayout, QComboBox, QSizePolicy)
-from PyQt6.QtCore import QThread, pyqtSignal, Qt, QTimer
+from PyQt6.QtCore import QThread, pyqtSignal, Qt, QTimer, QEvent
 from PyQt6.QtGui import QImage, QPixmap
 from adafruit_servokit import ServoKit
 import cv2
@@ -22,6 +22,7 @@ DEADZONE_Y = 40
 K_P = 0.5
 SERVO_STEP = 1.5
 CSV_PATH = 'tmp/face_info_log.csv'
+ZMQ_FACE_IDS_PORT = "5525"
 
 class MotorTrackingSystem:
     def __init__(self, servo_kit):
@@ -55,8 +56,8 @@ class MotorTrackingSystem:
         self.monitor_process = None
 
         # Create target face file if it doesn't exist
-        target_file = os.path.join(self.project_root, 'tmp', 'target_face.txt')
-        os.makedirs(os.path.join(self.project_root, 'tmp'), exist_ok=True)
+        target_file = os.path.join(self.project_root, 'rpi_control', 'utils', 'tmp', 'target_face.txt')
+        os.makedirs(os.path.join(self.project_root, 'rpi_control', 'utils', 'tmp'), exist_ok=True)
         if not os.path.exists(target_file):
             with open(target_file, 'w') as f:
                 f.write('1')  # Default face ID
@@ -100,7 +101,7 @@ class MotorTrackingSystem:
         
         # Update TARGET_GALLERY_ID in tracking_motors
         if hasattr(self, 'face_to_track'):
-            target_file = os.path.join(self.project_root, 'tmp', 'target_face.txt')
+            target_file = os.path.join(self.project_root, 'rpi_control', 'utils', 'tmp', 'target_face.txt')
             with open(target_file, 'w') as f:
                 f.write(str(self.face_to_track))
 
@@ -234,78 +235,123 @@ class FaceTrackingWidget(QWidget):
         self.face_tracker = None
         self.worker = None
 
-        # Add ZMQ context for receiving face IDs
-        self.zmq_context = zmq.Context()
-        self.face_ids_socket = self.zmq_context.socket(zmq.SUB)
-        self.face_ids_socket.connect("tcp://localhost:5556")  # Use a different port
-        self.face_ids_socket.setsockopt_string(zmq.SUBSCRIBE, "")
-        
-        # Timer for updating face list
+        # Add timer for updating face list from CSV
         self.update_timer = QTimer()
         self.update_timer.timeout.connect(self.update_face_list)
         
-        self.retry_count = 0
-        self.max_retries = 5
-
         # Connect face selection change signal
         self.face_select.currentTextChanged.connect(self.on_face_selection_changed)
 
-        self.is_tracking = False  # Add tracking state flag
+        self.is_tracking = False
+
+        self.window_timer = QTimer()
+        self.window_timer.timeout.connect(self.activate_gst_window)
+        self.window_timer.setInterval(500)
+        self.gst_window_id = None
+
+        # Install event filter to catch user interactions
+        self.installEventFilter(self)
+        
+        # Also install event filter on all child widgets
+        for child in self.findChildren(QWidget):
+            child.installEventFilter(self)
+
+    def get_gst_window_id(self):
+        """Get the window ID of gst-launch-1.0"""
+        try:
+            # Get window ID using wmctrl
+            result = subprocess.check_output(['wmctrl', '-l']).decode()
+            for line in result.split('\n'):
+                if 'gst-launch-1.0' in line:
+                    return line.split()[0]  # Get the window ID (first column)
+        except Exception as e:
+            print(f"Error getting gst window ID: {e}")
+        return None
+
+    def eventFilter(self, obj, event):
+        """Handle events for user interaction detection"""
+        if self.isVisible() and self.is_tracking:
+            # List of events that indicate user interaction
+            user_events = [
+                QEvent.Type.MouseButtonPress,
+                QEvent.Type.MouseButtonRelease,
+                QEvent.Type.MouseButtonDblClick,
+                QEvent.Type.KeyPress,
+                QEvent.Type.KeyRelease,
+                QEvent.Type.Wheel,
+                QEvent.Type.FocusIn,
+                QEvent.Type.FocusOut
+            ]
+            
+            if event.type() in user_events:
+                # Delay the activation slightly to ensure it happens after the user action
+                QTimer.singleShot(100, self.activate_gst_window)
+        
+        # Always return False to allow the event to be handled by other handlers
+        return False
+
+    def activate_gst_window(self):
+        """Activate the gst-launch window if it exists"""
+        if self.gst_window_id and self.isVisible() and self.is_tracking:
+            try:
+                subprocess.run(['xdotool', 'windowactivate', self.gst_window_id], check=False)
+            except Exception as e:
+                print(f"Error activating window: {e}")
 
     def update_face_list(self):
-        # Only try to update if tracking is active
+        """Update face list from CSV file"""
         if not self.is_tracking:
             return
 
         try:
-            if self.face_ids_socket.poll(50):
-                data = self.face_ids_socket.recv_string()
-                unique_ids = json.loads(data)
+            csv_path = os.path.join(self.project_root, 'rpi_control', 'utils', 'tmp', 'face_info_log.csv')
+            if not os.path.exists(csv_path):
+                print(f"CSV file not found at: {csv_path}")
+                return
+
+            with open(csv_path, 'r') as f:
+                reader = csv.reader(f)
+                # Skip header row
+                next(reader, None)
+                # Read all rows
+                rows = list(reader)
                 
-                if unique_ids:
+                # Get unique gallery IDs from column 3 (index 3), excluding 'nd'
+                face_ids = set()
+                for row in rows:
+                    if len(row) > 3 and row[3] != 'nd' and row[3].isdigit():
+                        face_ids.add(int(row[3]))
+                
+                # If we found any valid IDs
+                if face_ids:
+                    # Sort the IDs numerically
+                    unique_ids = sorted(list(face_ids))
+                    
+                    # Get current selection
                     current_text = self.face_select.currentText()
-                    self.face_select.clear()
-                    self.face_select.addItems([str(id) for id in sorted(unique_ids)])
                     
-                    if current_text:
-                        index = self.face_select.findText(current_text)
-                        if index >= 0:
-                            self.face_select.setCurrentIndex(index)
+                    # Only update if the list has changed
+                    current_items = [self.face_select.itemText(i) for i in range(self.face_select.count())]
+                    new_items = [str(id) for id in unique_ids]
                     
-                    self.retry_count = 0
-                else:
-                    self.handle_empty_ids()
-            else:
-                self.handle_empty_ids()
-                
-        except Exception as e:
-            print(f"Error in update_face_list: {e}")
-            self.handle_empty_ids()
-
-    def handle_empty_ids(self):
-        """Handle cases where no IDs are received"""
-        if not self.is_tracking:
-            return
-
-        self.retry_count += 1
-        if self.retry_count >= self.max_retries:
-            print("Retrying ZMQ connection...")
-            self.reinit_zmq_connection()
-            self.retry_count = 0
-
-    def reinit_zmq_connection(self):
-        """Reinitialize ZMQ connection if needed"""
-        try:
-            # Close existing connection
-            self.face_ids_socket.close()
+                    if current_items != new_items:
+                        print(f"Updating face list with IDs: {unique_ids}")
+                        self.face_select.clear()
+                        self.face_select.addItems(new_items)
+                        
+                        # Restore previous selection if it still exists
+                        if current_text:
+                            index = self.face_select.findText(current_text)
+                            if index >= 0:
+                                self.face_select.setCurrentIndex(index)
+                            else:
+                                # If previous selection is gone, select first item
+                                self.face_select.setCurrentIndex(0)
             
-            # Create new connection
-            self.face_ids_socket = self.zmq_context.socket(zmq.SUB)
-            self.face_ids_socket.connect("tcp://localhost:5556")
-            self.face_ids_socket.setsockopt_string(zmq.SUBSCRIBE, "")
-            print("ZMQ connection reinitialized")
         except Exception as e:
-            print(f"Error reinitializing ZMQ connection: {e}")
+            print(f"Error updating face list: {e}")
+            import traceback
+            traceback.print_exc()
 
     def change_tracked_face(self, index):
         if self.face_tracker and index >= 0:
@@ -323,12 +369,17 @@ class FaceTrackingWidget(QWidget):
 
         # Set tracking flag and start timer
         self.is_tracking = True
-        self.retry_count = 0
-        self.update_timer.start(100)
+        self.update_timer.start(100)  # Update face list every 100ms
 
         # Update button states
         self.start_button.setEnabled(False)
         self.stop_button.setEnabled(True)
+
+        # Get gst window ID and start window timer with shorter interval
+        time.sleep(2)  # Wait for gst window to appear
+        self.gst_window_id = self.get_gst_window_id()
+        if self.gst_window_id:
+            self.window_timer.start()  # Uses the 1-second interval set in init
 
     def stop_tracking(self):
         # Update tracking state first
@@ -336,9 +387,6 @@ class FaceTrackingWidget(QWidget):
         
         # Stop the timer
         self.update_timer.stop()
-        
-        # Clear retry count
-        self.retry_count = 0
         
         # Clear the face selection combo box
         self.face_select.clear()
@@ -350,10 +398,6 @@ class FaceTrackingWidget(QWidget):
             self.face_tracker.stop()
             self.worker.wait()
 
-            # Stop the face list update timer
-            self.update_timer.stop()
-            self.face_select.clear()
-
             # Clean up the face tracker
             if self.face_tracker:
                 self.face_tracker.cleanup()
@@ -364,6 +408,10 @@ class FaceTrackingWidget(QWidget):
             self.start_button.setEnabled(True)
             self.stop_button.setEnabled(False)
             print("Face tracking stopped.")
+
+        # Stop window timer
+        self.window_timer.stop()
+        self.gst_window_id = None
 
     def on_tracking_finished(self):
         # Clean up the face tracker
@@ -383,12 +431,11 @@ class FaceTrackingWidget(QWidget):
             if not text:  # Handle empty selection
                 return
                 
-            # 直接使用选择的数字ID
-            face_id = text  # 不再需要分割字符串
+            face_id = text
             
             # Write the new target face ID to file
-            target_file = os.path.join(self.project_root, 'tmp', 'target_face.txt')
-            os.makedirs(os.path.dirname(target_file), exist_ok=True)  # 确保目录存在
+            target_file = os.path.join(self.project_root, 'rpi_control', 'utils', 'tmp', 'target_face.txt')
+            os.makedirs(os.path.dirname(target_file), exist_ok=True)
             with open(target_file, 'w') as f:
                 f.write(face_id)
             
@@ -407,5 +454,16 @@ class FaceTrackingWidget(QWidget):
         """Called when widget is being closed"""
         self.is_tracking = False
         self.update_timer.stop()
-        if hasattr(self, 'face_ids_socket'):
-            self.face_ids_socket.close()
+
+    def hideEvent(self, event):
+        """Called when widget is hidden"""
+        self.window_timer.stop()
+        super().hideEvent(event)
+
+    def showEvent(self, event):
+        """Called when widget is shown"""
+        if self.is_tracking and self.gst_window_id:
+            self.window_timer.start()  # Uses the 1-second interval
+            # Immediate activation when showing
+            QTimer.singleShot(100, self.activate_gst_window)
+        super().showEvent(event)

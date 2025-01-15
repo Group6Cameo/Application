@@ -26,6 +26,9 @@ MAX_ROWS = 200
 CSV_HEADER = ['Timestamp', 'Rec_BufferSet', 'Detection_ID',
               'Gallery_ID', 'Label', 'Center_X', 'Center_Y']
 
+# Add these constants at the top of the file
+ZMQ_FACE_IDS_PORT = "5525"
+
 class RecordManager:
     def __init__(self, max_records=200, max_age_seconds=5.0):
         self.records = deque(maxlen=max_records)  # each item is (datetime_obj, row_data_list)
@@ -142,75 +145,87 @@ def monitor_zmq():
     record_manager = RecordManager(max_records=MAX_ROWS, max_age_seconds=MAX_HISTORY_SECONDS)
     last_cleanup = datetime.now()
     processed_data_ids = set()
-    current_unique_ids = set()  # Track current unique IDs
+    current_unique_ids = set()
     
-    # Write CSV header initially
-    with open(LOG_FILE, 'w', newline='') as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(CSV_HEADER)
-    
-    print("Starting ZMQ-based face tracking...")
-    
-    # Add publisher for face IDs
-    face_ids_socket = context.socket(zmq.PUB)
-    face_ids_socket.bind("tcp://*:5556")
-    
-    while True:
-        try:
-            if socket.poll(100):
-                data = socket.recv_json()
-                data_id = f"{data.get('timestamp (ms)', '')}_${data.get('stream_id', '')}"
-                
-                if data_id not in processed_data_ids:
-                    face_info = get_face_info(data)
+    # Create publisher with proper socket cleanup
+    face_ids_socket = None
+    try:
+        face_ids_socket = context.socket(zmq.PUB)
+        # Add timeout for binding
+        face_ids_socket.setsockopt(zmq.LINGER, 0)
+        face_ids_socket.bind(f"tcp://*:{ZMQ_FACE_IDS_PORT}")
+        
+        # Write CSV header initially
+        with open(LOG_FILE, 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(CSV_HEADER)
+        
+        print("Starting ZMQ-based face tracking...")
+        
+        while True:
+            try:
+                if socket.poll(100):
+                    data = socket.recv_json()
+                    data_id = f"{data.get('timestamp (ms)', '')}_${data.get('stream_id', '')}"
                     
-                    if face_info['mode0_id'] is not None:
-                        gallery_id = face_info['mode1_id'] or 'nd'
-                        label = face_info['label'] or 'nd'
+                    if data_id not in processed_data_ids:
+                        face_info = get_face_info(data)
                         
-                        row = [
-                            datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'),
-                            data['buffer_offset'],
-                            face_info['mode0_id'],
-                            gallery_id,
-                            label,
-                            face_info['center_x'],
-                            face_info['center_y']
-                        ]
-                        
-                        record_manager.add_record(row)
-                        processed_data_ids.add(data_id)
-                        
-                        # Update and publish unique IDs immediately if changed
-                        if gallery_id != 'nd':
-                            new_unique_ids = set(r[3] for _, r in record_manager.records if r[3] != 'nd')
-                            if new_unique_ids != current_unique_ids:
-                                current_unique_ids = new_unique_ids
-                                if current_unique_ids:
-                                    face_ids_socket.send_string(json.dumps(list(current_unique_ids)))
-                        
-                        if ENABLE_CONSOLE_PRINT:
-                            print(f"New Data - Rec BufferSet {data['buffer_offset']}: "
-                                  f"DetID:{face_info['mode0_id']}, "
-                                  f"GalleryID:{gallery_id}, "
-                                  f"Label:{label}, "
-                                  f"X:{face_info['center_x']}, "
-                                  f"Y:{face_info['center_y']}")
-            
-            # Clean old records every 5 seconds (only for memory management)
-            now = datetime.now()
-            if (now - last_cleanup).total_seconds() >= 5.0:
-                record_manager.clean_old_records()
-                if len(processed_data_ids) > MAX_ROWS * 2:
-                    processed_data_ids.clear()
-                last_cleanup = now
+                        if face_info['mode0_id'] is not None:
+                            gallery_id = face_info['mode1_id'] or 'nd'
+                            label = face_info['label'] or 'nd'
+                            
+                            row = [
+                                datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'),
+                                data['buffer_offset'],
+                                face_info['mode0_id'],
+                                gallery_id,
+                                label,
+                                face_info['center_x'],
+                                face_info['center_y']
+                            ]
+                            
+                            record_manager.add_record(row)
+                            processed_data_ids.add(data_id)
+                            
+                            # Update and publish unique IDs immediately if changed
+                            if gallery_id != 'nd':
+                                new_unique_ids = set(r[3] for _, r in record_manager.records if r[3] != 'nd')
+                                if new_unique_ids != current_unique_ids:
+                                    current_unique_ids = new_unique_ids
+                                    if current_unique_ids:
+                                        face_ids_socket.send_string(json.dumps(list(current_unique_ids)))
+                            
+                            if ENABLE_CONSOLE_PRINT:
+                                print(f"New Data - Rec BufferSet {data['buffer_offset']}: "
+                                      f"DetID:{face_info['mode0_id']}, "
+                                      f"GalleryID:{gallery_id}, "
+                                      f"Label:{label}, "
+                                      f"X:{face_info['center_x']}, "
+                                      f"Y:{face_info['center_y']}")
                 
-        except zmq.ZMQError as e:
-            print(f"ZMQ error: {str(e)}")
-            time.sleep(0.1)
-        except Exception as e:
-            print(f"Unexpected error: {str(e)}")
-            time.sleep(0.1)
+                # Clean old records every 5 seconds (only for memory management)
+                now = datetime.now()
+                if (now - last_cleanup).total_seconds() >= 5.0:
+                    record_manager.clean_old_records()
+                    if len(processed_data_ids) > MAX_ROWS * 2:
+                        processed_data_ids.clear()
+                    last_cleanup = now
+                
+            except zmq.ZMQError as e:
+                print(f"ZMQ error: {str(e)}")
+                time.sleep(0.1)
+            except Exception as e:
+                print(f"Unexpected error: {str(e)}")
+                time.sleep(0.1)
+    except Exception as e:
+        print(f"Error in monitor_zmq: {e}")
+    finally:
+        # Proper cleanup
+        if face_ids_socket:
+            face_ids_socket.close()
+        socket.close()
+        context.term()
 
 def main():
     clear_file(LOG_FILE)

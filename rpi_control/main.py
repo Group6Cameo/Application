@@ -140,7 +140,14 @@ class MainWindow(QMainWindow):
             self.menu_widget.hide()
 
     def close_app(self):
-        self.brightness_manager.stop()
+        # Stop face tracking if active
+        if hasattr(self, 'face_tracking_widget'):
+            self.face_tracking_widget.stop_tracking()
+        
+        # Stop brightness manager if it exists
+        if hasattr(self, 'brightness_manager'):
+            self.brightness_manager.stop()
+        
         sys.exit(0)
 
     def switch_to_camouflage(self):
