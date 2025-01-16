@@ -83,3 +83,19 @@ class WifiManager:
         except subprocess.CalledProcessError as e:
             print(f"Failed to connect to {ssid}. Error: {e}")
             return False
+
+    def get_current_network(self):
+        try:
+            output = subprocess.check_output(
+                "nmcli -t -f ACTIVE,SSID dev wifi | grep '^yes'",
+                shell=True,
+                stderr=subprocess.DEVNULL
+            ).decode().strip()
+
+            if output:
+                # Extract SSID from the output (format is "yes:SSID")
+                return output.split(':')[1]
+            return None
+
+        except subprocess.CalledProcessError:
+            return None
