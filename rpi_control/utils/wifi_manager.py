@@ -22,19 +22,64 @@ class WifiManager:
             else:
                 networks = re.findall(r'ESSID:"([^"]*)"', output)
 
-            return networks
+            # Remove duplicates while preserving order
+            return list(dict.fromkeys(networks))
         except subprocess.CalledProcessError:
             return []
 
-    def connect_to_network(self, ssid, password=None):
-        # This is a basic implementation - you might want to use wpa_supplicant
-        # or NetworkManager for more robust connectivity
+    def connect_to_network(self, ssid, username=None, password=None):
         try:
-            if password:
+            # First check if we're already connected to this network
+            current_connection = subprocess.check_output(
+                "nmcli -t -f ACTIVE,SSID dev wifi | grep '^yes'",
+                shell=True, stderr=subprocess.DEVNULL
+            ).decode().strip()
+
+            if ssid in current_connection:
+                return True
+
+            # Get security info for the network
+            try:
+                security_info = subprocess.check_output(
+                    f'nmcli -f SECURITY device wifi list | grep "{ssid}"',
+                    shell=True
+                ).decode().strip()
+
+                # Check if network requires credentials
+                is_enterprise = 'WPA2-Enterprise' in security_info or 'WPA-Enterprise' in security_info
+                needs_password = 'WPA' in security_info or 'WEP' in security_info
+
+                if is_enterprise and not username:
+                    print(f"\nNetwork '{ssid}' requires authentication.")
+                    username = input("Please enter username: ")
+                    if not password:
+                        password = input("Please enter password: ")
+
+                elif needs_password and not password:
+                    print(f"\nNetwork '{ssid}' requires a password.")
+                    password = input("Please enter password: ")
+
+            except subprocess.CalledProcessError:
+                pass  # Network might be open or not found
+
+            # Attempt to connect
+            if username and password:
+                cmd = f'nmcli device wifi connect "{ssid}" password "{password}" username "{username}"'
+            elif password:
                 cmd = f'nmcli device wifi connect "{ssid}" password "{password}"'
             else:
                 cmd = f'nmcli device wifi connect "{ssid}"'
-            subprocess.check_call(cmd, shell=True)
-            return True
-        except subprocess.CalledProcessError:
+
+            subprocess.check_call(cmd, shell=True, stderr=subprocess.PIPE)
+
+            # Verify connection was successful
+            verification = subprocess.check_output(
+                "nmcli -t -f ACTIVE,SSID dev wifi | grep '^yes'",
+                shell=True
+            ).decode().strip()
+
+            return ssid in verification
+
+        except subprocess.CalledProcessError as e:
+            print(f"Failed to connect to {ssid}. Error: {e}")
             return False

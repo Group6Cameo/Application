@@ -25,3 +25,4 @@ netifaces
 pyngrok
 python3-xlib
 xdotool
+network-manager
