@@ -5,6 +5,7 @@ import pkg_resources
 import qrcode
 from ..utils.network_info import get_ip_address, get_public_url
 from PyQt6.QtWidgets import QDialog
+from PyQt6.QtCore import QEvent
 
 
 class QRDialog(QDialog):
@@ -65,6 +66,24 @@ class QRDialog(QDialog):
 
         self.setLayout(layout)
 
+        # Install event filter to handle events
+        self.installEventFilter(self)
+
+    def eventFilter(self, obj, event):
+        """Handle events to prevent dialog from being hidden"""
+        if event.type() in [
+            QEvent.Type.WindowDeactivate,
+            QEvent.Type.FocusOut,
+            QEvent.Type.MouseButtonPress,
+            QEvent.Type.MouseButtonRelease,
+            QEvent.Type.MouseButtonDblClick
+        ]:
+            # Bring dialog back to front
+            self.activateWindow()
+            self.raise_()
+            return True
+        return super().eventFilter(obj, event)
+
     def paintEvent(self, event):
         painter = QPainter(self)
         # Draw QR code centered in dialog
@@ -74,7 +93,7 @@ class QRDialog(QDialog):
         painter.drawPixmap(x, y, self.qr_pixmap)
 
     def closeEvent(self, event):
-        # Override close event to prevent unexpected closing
+        # Only allow closing through the close button
         if event.spontaneous():
             event.ignore()
         else:
