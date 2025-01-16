@@ -134,7 +134,7 @@ class MotorTrackingSystem:
         except Exception as e:
             print(f"Error stopping processes: {e}")
 
-    def run(self, frame_signal):
+    def run(self):
         self.is_running = True
         self.start_tracking_motors()
 
@@ -187,15 +187,19 @@ class MotorTrackingSystem:
 
 
 class FaceTrackingWorker(QThread):
-    finished = pyqtSignal()
+    finished = pyqtSignal(bool)
 
     def __init__(self, face_tracker):
         super().__init__()
         self.face_tracker = face_tracker
 
     def run(self):
-        self.face_tracker.run(None)
-        self.finished.emit()
+        try:
+            self.face_tracker.run()
+            self.finished.emit(True)
+        except Exception as e:
+            print(f"Error in face tracking worker: {e}")
+            self.finished.emit(False)
 
 
 class FaceTrackingWidget(QWidget):
