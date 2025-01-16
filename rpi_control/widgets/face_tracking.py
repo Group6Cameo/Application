@@ -295,20 +295,20 @@ class FaceTrackingWidget(QWidget):
         self.face_tracker = None
         self.worker = None
 
-        # Add timer for updating face list from CSV
+        # Create timer for updating face list from CSV
         self.update_timer = QTimer()
         self.update_timer.timeout.connect(self.update_face_list)
+        self.update_timer.start(1000)  # Update every second
 
         # Connect face selection change signal
         self.face_select.currentTextChanged.connect(
             self.on_face_selection_changed)
 
+        # Window management
         self.is_tracking = False
-
         self.window_timer = QTimer()
         self.window_timer.timeout.connect(self.activate_gst_window)
-        self.window_timer.setInterval(500)
-        self.gst_window_id = None
+        self.window_timer.setInterval(500)  # Check every 500ms
 
         # Install event filter to catch user interactions
         self.installEventFilter(self)
@@ -353,12 +353,20 @@ class FaceTrackingWidget(QWidget):
 
     def activate_gst_window(self):
         """Activate the gst-launch window if it exists"""
-        if self.gst_window_id and self.isVisible() and self.is_tracking:
-            try:
-                subprocess.run(['xdotool', 'windowactivate',
-                               self.gst_window_id], check=False)
-            except Exception as e:
-                print(f"Error activating window: {e}")
+        if not self.is_tracking:
+            return
+
+        try:
+            # Get window ID using wmctrl
+            result = subprocess.check_output(['wmctrl', '-l']).decode()
+            for line in result.split('\n'):
+                if 'gst-launch-1.0' in line:
+                    window_id = line.split()[0]
+                    subprocess.run(
+                        ['wmctrl', '-i', '-a', window_id], check=False)
+                    break
+        except Exception as e:
+            print(f"Error activating window: {e}")
 
     def update_face_list(self):
         """Update face list from CSV file"""
@@ -367,9 +375,8 @@ class FaceTrackingWidget(QWidget):
 
         try:
             csv_path = os.path.join(
-                self.project_root, 'rpi_control', 'utils', 'tmp', 'face_info_log.csv')
+                self.project_root, 'tmp', 'face_info_log.csv')
             if not os.path.exists(csv_path):
-                print(f"CSV file not found at: {csv_path}")
                 return
 
             with open(csv_path, 'r') as f:
@@ -401,16 +408,14 @@ class FaceTrackingWidget(QWidget):
                     if current_items != new_items:
                         print(f"Updating face list with IDs: {unique_ids}")
                         self.face_select.clear()
-                        self.face_select.addItems(new_items)
+                        self.face_select.addItems(
+                            [str(id) for id in unique_ids])
 
                         # Restore previous selection if it still exists
                         if current_text:
                             index = self.face_select.findText(current_text)
                             if index >= 0:
                                 self.face_select.setCurrentIndex(index)
-                            else:
-                                # If previous selection is gone, select first item
-                                self.face_select.setCurrentIndex(0)
 
         except Exception as e:
             print(f"Error updating face list: {e}")
@@ -445,6 +450,15 @@ class FaceTrackingWidget(QWidget):
             # Update UI
             self.start_button.setEnabled(False)
             self.stop_button.setEnabled(True)
+
+            # Set tracking flag and start window timer
+            self.is_tracking = True
+            self.window_timer.start()
+
+            # Start face list updates
+            if not self.update_timer.isActive():
+                self.update_timer.start()
+
             print("Face tracking started successfully")
 
         except Exception as e:
@@ -455,6 +469,9 @@ class FaceTrackingWidget(QWidget):
     def stop_tracking(self):
         """Stop the face tracking process"""
         try:
+            self.is_tracking = False
+            self.window_timer.stop()
+
             if hasattr(self, 'face_tracker'):
                 self.face_tracker.stop()
                 self.face_tracker.cleanup()
@@ -525,13 +542,12 @@ class FaceTrackingWidget(QWidget):
 
     def hideEvent(self, event):
         """Called when widget is hidden"""
-        self.window_timer.stop()
         super().hideEvent(event)
+        self.window_timer.stop()
 
     def showEvent(self, event):
         """Called when widget is shown"""
-        if self.is_tracking and self.gst_window_id:
-            self.window_timer.start()  # Uses the 1-second interval
-            # Immediate activation when showing
-            QTimer.singleShot(100, self.activate_gst_window)
         super().showEvent(event)
+        if self.is_tracking:
+            self.window_timer.start()
+            QTimer.singleShot(100, self.activate_gst_window)
