@@ -257,10 +257,12 @@ class FaceTrackingWidget(QWidget):
 
         self.start_button = QPushButton("Start tracking")
         self.start_button.setStyleSheet(self.button_style)
+        self.start_button.clicked.connect(self.start_tracking)
 
         self.stop_button = QPushButton("Stop tracking")
         self.stop_button.setStyleSheet(self.button_style)
         self.stop_button.setEnabled(False)
+        self.stop_button.clicked.connect(self.stop_tracking)
 
         # Style the face selection combo box
         self.face_select = QComboBox()
@@ -417,71 +419,75 @@ class FaceTrackingWidget(QWidget):
             self.face_tracker.face_to_track = face_id
 
     def start_tracking(self):
-        # Create a new face tracker instance if needed
-        if not self.face_tracker:
-            self.face_tracker = MotorTrackingSystem(self.kit)
+        """Start the face tracking process"""
+        try:
+            # Initialize the kit if not already done
+            if not hasattr(self, 'kit'):
+                self.kit = ServoKit(channels=16)
+                self.kit.servo[0].set_pulse_width_range(400, 2600)
+                self.kit.servo[1].set_pulse_width_range(400, 2600)
+                self.kit.servo[2].set_pulse_width_range(400, 2600)
+                self.kit.servo[3].set_pulse_width_range(400, 2600)
 
-        self.worker = FaceTrackingWorker(self.face_tracker)
-        self.worker.finished.connect(self.on_tracking_finished)
-        self.worker.start()
+            # Initialize face tracker if needed
+            if not hasattr(self, 'face_tracker'):
+                self.face_tracker = MotorTrackingSystem(self.kit)
 
-        # Set tracking flag and start timer
-        self.is_tracking = True
-        self.update_timer.start(100)  # Update face list every 100ms
+            # Create and start worker if not already running
+            if not hasattr(self, 'worker') or not self.worker:
+                self.worker = FaceTrackingWorker(self.face_tracker)
+                self.worker.finished.connect(self.on_tracking_finished)
+                self.worker.start()
 
-        # Update button states
-        self.start_button.setEnabled(False)
-        self.stop_button.setEnabled(True)
+            # Update UI
+            self.start_button.setEnabled(False)
+            self.stop_button.setEnabled(True)
+            print("Face tracking started successfully")
 
-        # Get gst window ID and start window timer with shorter interval
-        time.sleep(2)  # Wait for gst window to appear
-        self.gst_window_id = self.get_gst_window_id()
-        if self.gst_window_id:
-            self.window_timer.start()  # Uses the 1-second interval set in init
+        except Exception as e:
+            print(f"Error starting face tracking: {e}")
+            import traceback
+            traceback.print_exc()
 
     def stop_tracking(self):
-        # Update tracking state first
-        self.is_tracking = False
-
-        # Stop the timer
-        self.update_timer.stop()
-
-        # Clear the face selection combo box
-        self.face_select.clear()
-
-        if self.face_tracker:
-            self.face_tracker.stop_tracking_motors()
-
-        if self.worker and self.worker.isRunning():
-            self.face_tracker.stop()
-            self.worker.wait()
-
-            # Clean up the face tracker
-            if self.face_tracker:
+        """Stop the face tracking process"""
+        try:
+            if hasattr(self, 'face_tracker'):
+                self.face_tracker.stop()
                 self.face_tracker.cleanup()
-            self.face_tracker = None
-            self.worker = None
+                self.face_tracker = None
 
-            # Update button states
+            if hasattr(self, 'worker') and self.worker:
+                self.worker.quit()
+                self.worker.wait()
+                self.worker = None
+
+            # Update UI
             self.start_button.setEnabled(True)
             self.stop_button.setEnabled(False)
-            print("Face tracking stopped.")
+            print("Face tracking stopped successfully")
 
-        # Stop window timer
-        self.window_timer.stop()
-        self.gst_window_id = None
+        except Exception as e:
+            print(f"Error stopping face tracking: {e}")
+            import traceback
+            traceback.print_exc()
 
     def on_tracking_finished(self):
-        # Clean up the face tracker
-        if self.face_tracker:
-            self.face_tracker.cleanup()
-        self.face_tracker = None
-        self.worker = None
+        """Handle completion of tracking"""
+        try:
+            if hasattr(self, 'face_tracker'):
+                self.face_tracker.cleanup()
+                self.face_tracker = None
 
-        # Update button states
-        self.start_button.setEnabled(True)
-        self.stop_button.setEnabled(False)
-        print("Face tracking has completed.")
+            self.worker = None
+            self.start_button.setEnabled(True)
+            self.stop_button.setEnabled(False)
+            print("Face tracking finished successfully")
+
+        except Exception as e:
+            print(f"Error in tracking finished handler: {e}")
+            import traceback
+            traceback.print_exc()
 
     def on_face_selection_changed(self, text):
         """Handle face ID selection change"""
