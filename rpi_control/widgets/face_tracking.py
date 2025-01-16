@@ -433,15 +433,14 @@ class FaceTrackingWidget(QWidget):
                 self.kit.servo[2].set_pulse_width_range(400, 2600)
                 self.kit.servo[3].set_pulse_width_range(400, 2600)
 
-            # Initialize face tracker if needed
-            if not hasattr(self, 'face_tracker'):
-                self.face_tracker = MotorTrackingSystem(self.kit)
+            # Initialize face tracker
+            self.face_tracker = MotorTrackingSystem(
+                self.kit)  # Create new instance each time
 
-            # Create and start worker if not already running
-            if not hasattr(self, 'worker') or not self.worker:
-                self.worker = FaceTrackingWorker(self.face_tracker)
-                self.worker.finished.connect(self.on_tracking_finished)
-                self.worker.start()
+            # Create and start worker
+            self.worker = FaceTrackingWorker(self.face_tracker)
+            self.worker.finished.connect(self.on_tracking_finished)
+            self.worker.start()
 
             # Update UI
             self.start_button.setEnabled(False)
