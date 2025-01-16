@@ -11,9 +11,16 @@ class QRDialog(QDialog):
     def __init__(self, url):
         super().__init__()
         self.setWindowTitle("Scan QR Code")
-        self.setModal(True)  # Make dialog modal
-        self.setWindowFlags(self.windowFlags() |
-                            Qt.WindowType.WindowStaysOnTopHint)  # Keep on top
+
+        # Make dialog modal and force it to stay on top
+        self.setWindowModality(Qt.WindowModality.ApplicationModal)
+        self.setModal(True)
+        self.setWindowFlags(
+            Qt.WindowType.Window |
+            Qt.WindowType.WindowStaysOnTopHint |
+            Qt.WindowType.CustomizeWindowHint |
+            Qt.WindowType.WindowTitleHint
+        )
 
         # Generate QR code
         qr = qrcode.QRCode(version=1, box_size=10, border=5)
@@ -29,8 +36,9 @@ class QRDialog(QDialog):
         self.setFixedSize(self.qr_pixmap.width() + 40,
                           self.qr_pixmap.height() + 40)
 
-        # Add close button
+        # Create main layout
         layout = QVBoxLayout()
+        layout.setContentsMargins(20, 20, 20, 20)
 
         # Add spacer above button
         layout.addStretch()
@@ -64,6 +72,17 @@ class QRDialog(QDialog):
         y = (self.height() - self.qr_pixmap.height() -
              60) // 2  # Adjust for button height
         painter.drawPixmap(x, y, self.qr_pixmap)
+
+    def closeEvent(self, event):
+        # Override close event to prevent unexpected closing
+        if event.spontaneous():
+            event.ignore()
+        else:
+            super().closeEvent(event)
+
+    def mousePressEvent(self, event):
+        # Prevent mouse clicks from closing the dialog
+        event.accept()
 
 
 class CalibrationWidget(QWidget):
