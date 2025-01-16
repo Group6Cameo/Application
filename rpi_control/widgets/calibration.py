@@ -11,6 +11,9 @@ class QRDialog(QDialog):
     def __init__(self, url):
         super().__init__()
         self.setWindowTitle("Scan QR Code")
+        self.setModal(True)  # Make dialog modal
+        self.setWindowFlags(self.windowFlags() |
+                            Qt.WindowType.WindowStaysOnTopHint)  # Keep on top
 
         # Generate QR code
         qr = qrcode.QRCode(version=1, box_size=10, border=5)
@@ -26,11 +29,40 @@ class QRDialog(QDialog):
         self.setFixedSize(self.qr_pixmap.width() + 40,
                           self.qr_pixmap.height() + 40)
 
+        # Add close button
+        layout = QVBoxLayout()
+
+        # Add spacer above button
+        layout.addStretch()
+
+        # Add close button
+        close_button = QPushButton("Close")
+        close_button.setStyleSheet("""
+            QPushButton {
+                min-height: 50px;
+                padding: 10px;
+                font-size: 16px;
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                margin: 5px;
+            }
+            QPushButton:pressed {
+                background-color: #45a049;
+            }
+        """)
+        close_button.clicked.connect(self.accept)
+        layout.addWidget(close_button)
+
+        self.setLayout(layout)
+
     def paintEvent(self, event):
         painter = QPainter(self)
         # Draw QR code centered in dialog
         x = (self.width() - self.qr_pixmap.width()) // 2
-        y = (self.height() - self.qr_pixmap.height()) // 2
+        y = (self.height() - self.qr_pixmap.height() -
+             60) // 2  # Adjust for button height
         painter.drawPixmap(x, y, self.qr_pixmap)
 
 
