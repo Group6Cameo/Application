@@ -374,9 +374,13 @@ class FaceTrackingWidget(QWidget):
             return
 
         try:
+            # Use the correct path to the CSV file
             csv_path = os.path.join(
-                self.project_root, 'tmp', 'face_info_log.csv')
+                self.project_root, 'rpi_control', 'utils', 'tmp', 'face_info_log.csv')
+            print(f"Looking for CSV at: {csv_path}")  # Debug print
+
             if not os.path.exists(csv_path):
+                print(f"CSV file not found at: {csv_path}")  # Debug print
                 return
 
             with open(csv_path, 'r') as f:
@@ -391,11 +395,14 @@ class FaceTrackingWidget(QWidget):
                 for row in rows:
                     if len(row) > 3 and row[3] != 'nd' and row[3].isdigit():
                         face_ids.add(int(row[3]))
+                        print(f"Found face ID: {row[3]}")  # Debug print
 
                 # If we found any valid IDs
                 if face_ids:
                     # Sort the IDs numerically
                     unique_ids = sorted(list(face_ids))
+                    # Debug print
+                    print(f"Unique face IDs found: {unique_ids}")
 
                     # Get current selection
                     current_text = self.face_select.currentText()
@@ -416,6 +423,8 @@ class FaceTrackingWidget(QWidget):
                             index = self.face_select.findText(current_text)
                             if index >= 0:
                                 self.face_select.setCurrentIndex(index)
+                else:
+                    print("No valid face IDs found in CSV")  # Debug print
 
         except Exception as e:
             print(f"Error updating face list: {e}")
