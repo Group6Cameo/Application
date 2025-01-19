@@ -377,7 +377,6 @@ class FaceTrackingWidget(QWidget):
             # Use the correct path to the CSV file
             csv_path = os.path.join(
                 self.project_root, 'rpi_control', 'utils', 'tmp', 'face_info_log.csv')
-            print(f"Looking for CSV at: {csv_path}")  # Debug print
 
             if not os.path.exists(csv_path):
                 print(f"CSV file not found at: {csv_path}")  # Debug print
@@ -395,7 +394,6 @@ class FaceTrackingWidget(QWidget):
                 for row in rows:
                     if len(row) > 3 and row[3] != 'nd' and row[3].isdigit():
                         face_ids.add(int(row[3]))
-                        print(f"Found face ID: {row[3]}")  # Debug print
 
                 # If we found any valid IDs
                 if face_ids:

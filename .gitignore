@@ -1,4 +1,7 @@
 **/__pycache__/
+**/__pycache__/*
 **/tmp/
 **.log
 /rpi_control/utils/models
+gstshark*
+**/camouflage/

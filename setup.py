@@ -1,29 +1,13 @@
 from setuptools import setup, find_packages
 
+with open('requirements.txt') as f:
+    required = f.read().splitlines()
+
 setup(
     name="rpi-control",
     version="0.1.0",
     packages=find_packages(),
-    install_requires=[
-        "PyQt6",
-        "wifi>=0.3.8",
-        "opencv-python",
-        "cmake",
-        "face_recognition",
-        "cvzone",
-        "mediapipe",
-        "numpy",
-        "scipy",
-        "pillow",
-        "ultralytics",
-        "scikit-learn",
-        "face_recognition",
-        "dlib",
-        "picamera2",
-        "fastapi",
-        "uvicorn[standard]",
-        "pyngrok",
-    ],
+    install_requires=required,
     entry_points={
         'console_scripts': [
             'rpi-control=rpi_control.launcher:main',
