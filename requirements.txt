@@ -2,16 +2,11 @@ PyQt6
 wifi>=0.3.8
 opencv-python
 cmake
-face_recognition
-cvzone
-mediapipe
 numpy
 scipy
 pillow
 ultralytics
 scikit-learn
-face_recognition
-dlib
 picamera2
 fastapi
 uvicorn[standard]
@@ -21,8 +16,10 @@ qrcode
 pillow  # Required by qrcode
 aiohttp
 aiofile
+asyncio
 netifaces
 pyngrok
 python3-xlib
 xdotool
 network-manager
+zmq
