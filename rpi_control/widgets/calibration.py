@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QWidget, QPushButton, QVBoxLayout
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QPainter, QPixmap, QPalette, QColor
 import pkg_resources
 import qrcode
@@ -34,8 +34,7 @@ class QRDialog(QDialog):
         self.qr_pixmap = QPixmap("/tmp/temp_qr.png")
 
         # Set fixed size for dialog
-        self.setFixedSize(self.qr_pixmap.width() + 40,
-                          self.qr_pixmap.height() + 40)
+        self.setFixedSize(self.qr_pixmap.width() + 40, self.qr_pixmap.height() + 40)
 
         # Create main layout
         layout = QVBoxLayout()
@@ -66,42 +65,40 @@ class QRDialog(QDialog):
 
         self.setLayout(layout)
 
-        # Install event filter to handle events
+        # Install event filter
         self.installEventFilter(self)
 
     def eventFilter(self, obj, event):
-        """Handle events to prevent dialog from being hidden"""
+        """Handle events to keep dialog on top"""
         if event.type() in [
             QEvent.Type.WindowDeactivate,
             QEvent.Type.FocusOut,
             QEvent.Type.MouseButtonPress,
             QEvent.Type.MouseButtonRelease,
-            QEvent.Type.MouseButtonDblClick
+            QEvent.Type.MouseButtonDblClick,
+            QEvent.Type.WindowStateChange  # Added this event
         ]:
-            # Bring dialog back to front
-            self.activateWindow()
-            self.raise_()
+            QTimer.singleShot(100, self._ensure_on_top)  # Use timer to ensure window activation
             return True
         return super().eventFilter(obj, event)
 
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        # Draw QR code centered in dialog
-        x = (self.width() - self.qr_pixmap.width()) // 2
-        y = (self.height() - self.qr_pixmap.height() -
-             60) // 2  # Adjust for button height
-        painter.drawPixmap(x, y, self.qr_pixmap)
+    def _ensure_on_top(self):
+        """Helper method to ensure window stays on top"""
+        self.activateWindow()
+        self.raise_()
+        self.show()
 
     def closeEvent(self, event):
-        # Only allow closing through the close button
         if event.spontaneous():
             event.ignore()
         else:
             super().closeEvent(event)
 
-    def mousePressEvent(self, event):
-        # Prevent mouse clicks from closing the dialog
-        event.accept()
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        x = (self.width() - self.qr_pixmap.width()) // 2
+        y = (self.height() - self.qr_pixmap.height() - 60) // 2
+        painter.drawPixmap(x, y, self.qr_pixmap)
 
 
 class CalibrationWidget(QWidget):

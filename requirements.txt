@@ -15,11 +15,14 @@ python-multipart
 qrcode
 pillow  # Required by qrcode
 aiohttp
-aiofile
+aiofiles
 asyncio
 netifaces
 pyngrok
 python3-xlib
 xdotool
 network-manager
+adafruit-circuitpython-servokit
+adafruit-circuitpython-bh1750
+adafruit-circuitpython-apds9960
 zmq

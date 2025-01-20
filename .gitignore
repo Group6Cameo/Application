@@ -1,7 +1,11 @@
 **/__pycache__/
-**/__pycache__/*
 **/tmp/
 **.log
 /rpi_control/utils/models
 gstshark*
 **/camouflage/
+*.egg-info/
+rpi_control/utils/__pycache__
+rpi_control/widgets/__pycache__
+rpi_control.egg-info
+rpi_control/assets/camouflage
