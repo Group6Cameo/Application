@@ -232,6 +232,13 @@ create_startup() {
     cat > "$HOME_DIR/app.sh" << EOL
 #!/bin/bash
 
+export HAILO_SDK_PATH=/opt/hailo/tappas
+export GST_PLUGIN_PATH=$HAILO_SDK_PATH/lib/aarch64-linux-gnu/gstreamer-1.0:$GST_PLUGIN_PATH
+export LD_LIBRARY_PATH=$HAILO_SDK_PATH/lib/aarch64-linux-gnu:$LD_LIBRARY_PATH
+
+echo "GST_PLUGIN_PATH: $GST_PLUGIN_PATH"
+echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
+
 # Wait for desktop environment to fully load
 sleep 1
 
@@ -239,8 +246,8 @@ sleep 1
 export DISPLAY=:0
 export XAUTHORITY=/home/cameo/.Xauthority
 
-REPO_DIR="/home/cameo/Desktop/Repos"
-APP_DIR="/home/cameo/Desktop/Repos/Application"
+REPO_DIR="$REPO_DIR"
+APP_DIR="$APP_DIR"
 
 # Ensure xterm is installed
 if ! command -v xterm &> /dev/null; then
@@ -249,12 +256,6 @@ fi
 
 # Open a new terminal and execute the commands
 xterm -display :0 -hold -e bash -c '
-    echo "Changing to repository directory..."
-    cd '"$REPO_DIR"'
-    
-    echo "Activating virtual environment..."
-    source cameo/bin/activate
-    
     echo "Changing to application directory..."
     cd '"$APP_DIR"'
     
@@ -280,6 +281,24 @@ Terminal=false
 EOL
 
     log_info "Startup configuration completed"
+    
+    # Create desktop shortcut
+    cat > "$HOME_DIR/Desktop/Start_App.desktop" << EOL
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Start App
+Comment=Launch the application
+Exec=/bin/bash $HOME_DIR/app.sh
+Icon=terminal
+Terminal=false
+Categories=Application;
+EOL
+
+    # Make desktop shortcut executable
+    chmod +x "$HOME_DIR/Desktop/Start_App.desktop"
+    
+    log_info "Desktop shortcut created"
 }
 
 # Add this at the end of the script, after successful installation
