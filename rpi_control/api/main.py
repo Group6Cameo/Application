@@ -38,7 +38,7 @@ app.mount("/static", StaticFiles(directory="rpi_control/static"), name="static")
 # Add these constants near the top with other imports
 UPLOAD_DIR = Path("/tmp/cameo_uploads")
 ASSETS_DIR = Path("rpi_control/assets/camouflage")
-BACKEND_URL = "http://213.5.130.78:17033/generate-camouflage"  # Placeholder URL
+BACKEND_URL = "http://185.150.27.254:27458/generate-camouflage"  # Placeholder URL
 
 # Ensure directories exist
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
