@@ -1,5 +1,16 @@
 #!/bin/bash
 
+# Cleanup function
+cleanup() {
+    echo "Cleaning up..."
+    pkill -f "python -m rpi_control.launcher"
+    pkill ngrok
+    sudo fuser -k 8000/tcp
+}
+
+# Register cleanup function
+trap cleanup EXIT
+
 # Get the repository directory (parent of script directory)
 REPO_DIR="$(realpath "$(dirname "$0")/..")"
 
@@ -15,9 +26,14 @@ if [ ! -d "$REPO_DIR/cameo/bin" ]; then
     exit 1
 fi
 
-# Activate virtual environment
-source $REPO_DIR/cameo/bin/activate
+# Activate virtual environment if not already activated
+if [[ "$VIRTUAL_ENV" == "" ]]; then
+    source $REPO_DIR/cameo/bin/activate
+fi
 
 # Run the application
 python -m rpi_control.launcher
+
+# Wait for cleanup
+wait
 
