@@ -65,9 +65,8 @@ check_system_requirements() {
     available_space=$(df -BG . | tail -n 1 | awk '{print $4}' | sed 's/G//')
     if [ "$available_space" -lt 10 ]; then
         log_warn "Less than 10GB disk space available: ${available_space}GB"
-        read -p "Continue anyway? (y/N) " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        read -p "Continue anyway? (Y/n): " choice
+        if [[ ! "$choice" =~ ^[Yy]$ ]]; then
             exit 1
         fi
     fi
@@ -76,18 +75,6 @@ check_system_requirements() {
     if ! ping -c 1 google.com >/dev/null 2>&1; then
         log_error "No internet connection"
         exit 1
-    fi
-}
-
-# Backup function
-create_backup() {
-    local backup_dir="../backup_$(date +%Y%m%d_%H%M%S)"
-    log_info "Creating backup in $backup_dir"
-    mkdir -p "$backup_dir"
-    
-    # Backup existing configurations if they exist
-    if [ -d "../cameo" ]; then
-        cp -r ../cameo "$backup_dir/" 2>/dev/null || true
     fi
 }
 
@@ -104,7 +91,6 @@ progress() {
 main() {
     # Initial checks
     check_system_requirements
-    create_backup
     
     # Exit on error
     set -e
@@ -114,38 +100,43 @@ main() {
     sudo apt update || check_error "System update"
     sudo apt upgrade -y || check_error "System upgrade"
     
-    # 2. OpenCV Dependencies
-    progress "Installing OpenCV dependencies"
-    sudo apt install -y libhdf5-dev libhdf5-103 libqtgui4 libqtwebkit4 libqt4-test \
-        libatlas-base-dev libjasper-dev libilmbase23 libopenexr23 libgstreamer1.0-dev \
-        || check_error "OpenCV dependencies installation"
-    
     sudo apt install -y python3-picamera2 || check_error "picamera2 installation"
     
-    # 3. Virtual Environment Setup
+    # 2. Virtual Environment Setup
     progress "Setting up Python virtual environment"
     sudo apt install -y python3-venv || check_error "venv installation"
     
-    if [ ! -d "../cameo" ]; then
-        python3 -m venv ../cameo --system-site-packages || check_error "Virtual environment creation"
+    if [ -d "../cameo" ]; then
+        log_warn "Virtual environment already exists"
+        read -p "Do you want to delete and recreate it? (Y/n): " choice
+        if [[ ! "$choice" =~ ^[Yy]$ ]]; then
+            log_info "Keeping existing virtual environment"
+        else
+            rm -rf ../cameo
+            python3 -m venv ../cameo --system-site-packages || check_error "Virtual environment creation"
+        fi
     else
-        log_warn "Virtual environment already exists, skipping creation"
+        python3 -m venv ../cameo --system-site-packages || check_error "Virtual environment creation"
     fi
     
     source ../cameo/bin/activate || check_error "Virtual environment activation"
     
-    # 4. Python Dependencies
+    # 3. Python Dependencies
     progress "Installing Python dependencies"
     pip install --upgrade pip || check_error "pip upgrade"
     pip install cmake || check_error "cmake installation"
+    sudo apt install -y qtbase5-dev qttools5-dev-tools
+    pip install --upgrade sip
+    sudo apt install python3-pyqt6
+    sudo apt-get install wmctrl
     pip install -r requirements.txt || check_error "Python requirements installation"
     
-    # 5. Hailo Installation
+    # 4. Hailo Installation
     progress "Installing Hailo components"
     sudo apt-get install -y hailo-all || check_error "Hailo installation"
     sudo apt install rpicam-apps || check_error "rpicam-apps installation"
     
-    # 6. System Libraries
+    # 5. System Libraries
     progress "Installing system libraries"
     sudo apt-get install -y \
         rsync ffmpeg x11-utils python3-dev python3-pip python3-setuptools \
@@ -159,27 +150,69 @@ main() {
         gstreamer1.0-qt5 gstreamer1.0-pulseaudio python3-gi python3-gi-cairo \
         gir1.2-gtk-3.0 gstreamer1.0-libcamera || check_error "System libraries installation"
     
-    # 7. Repository Setup
+    # 6. Repository Setup
     progress "Cloning and setting up repositories"
     cd ../
-    if [ ! -d "tappas_gcc12" ]; then
-        git clone https://github.com/Aoyamaxx/tappas_gcc12 || check_error "Repository cloning"
+    if [ -d "tappas_gcc12" ]; then
+        log_warn "tappas_gcc12 directory already exists"
+        read -p "Do you want to delete and reclone it? (Y/n): " choice
+        if [[ ! "$choice" =~ ^[Yy]$ ]]; then
+            log_info "Keeping existing tappas_gcc12 directory"
+        else
+            rm -rf tappas_gcc12
+            git clone https://github.com/Aoyamaxx/tappas_gcc12 || check_error "Repository cloning"
+        fi
     else
-        log_warn "tappas_gcc12 directory already exists, skipping clone"
+        git clone https://github.com/Aoyamaxx/tappas_gcc12 || check_error "Repository cloning"
     fi
     
     cd tappas_gcc12
+    mkdir hailort
+    git clone https://github.com/hailo-ai/hailort.git hailort/sources
     ./install.sh --skip-hailort --target-platform rpi || check_error "tappas installation"
     
-    # 8. Final Setup
+    # hailo-rpi5-examples installation
+    # cd ../
+    # if [ -d "hailo-rpi5-examples" ]; then
+    #     log_warn "hailo-rpi5-examples directory already exists"
+    #     read -p "Do you want to delete and reclone it? (Y/n): " choice
+    #     if [[ ! "$choice" =~ ^[Yy]$ ]]; then
+    #         log_info "Keeping existing hailo-rpi5-examples directory"
+    #         cd hailo-rpi5-examples
+    #     else
+    #         rm -rf hailo-rpi5-examples
+    #         git clone https://github.com/hailo-ai/hailo-rpi5-examples.git || check_error "hailo-rpi5-examples cloning"
+    #         cd hailo-rpi5-examples
+    #     fi
+    # else
+    #     git clone https://github.com/hailo-ai/hailo-rpi5-examples.git || check_error "hailo-rpi5-examples cloning"
+    #     cd hailo-rpi5-examples
+    # fi
+    
+    # # Install hailo-rpi5-examples
+    # ./install.sh || check_error "hailo-rpi5-examples installation"
+    
+    # 7. Final Setup
     progress "Performing final setup"
     cd ../
     cd Application
     pip install -e . || check_error "Application installation"
     
-    # 9. Verification
+    # 8. Verification
     progress "Verifying installation"
     python3 -c "import cv2; print('OpenCV Version:', cv2.__version__)" || check_error "OpenCV verification"
+    
+    # Install window management tools
+    progress "Installing window management tools"
+    sudo apt-get install -y wmctrl
+    
+    # Install Qt and Wayland dependencies
+    progress "Installing Qt and Wayland dependencies"
+    sudo apt-get install -y qt6-wayland
+    sudo apt-get install -y python3-pyqt6
+    
+    # Fix runtime directory permissions
+    sudo chmod 700 /run/user/1000
     
     log_info "Installation completed successfully!"
 }
@@ -205,6 +238,7 @@ cd \$REPO_DIR
 
 # Activate virtual environment
 source cameo/bin/activate
+
 
 cd \$APP_DIR
 
