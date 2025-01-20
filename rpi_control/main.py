@@ -15,6 +15,18 @@ from pathlib import Path
 
 
 class MenuWidget(QWidget):
+    """
+    A widget that provides the main navigation menu for the application.
+
+    Contains buttons for accessing different features:
+    - WiFi Settings
+    - Face Tracking
+    - Calibration
+    - Camouflage
+    - Screensaver
+    - Close Application
+    """
+
     def __init__(self, parent=None):
         super().__init__(parent)
         layout = QVBoxLayout()
@@ -39,6 +51,26 @@ class MenuWidget(QWidget):
 
 
 class MainWindow(QMainWindow):
+    """
+    The main application window that manages all widgets and their interactions.
+
+    This class is responsible for:
+    - Initializing and managing the UI layout
+    - Handling screen transitions between different widgets
+    - Managing the menu visibility
+    - Coordinating face tracking and camouflage pattern updates
+    - Handling application shutdown
+
+    Attributes:
+        menu_widget (MenuWidget): Side menu for navigation
+        stacked_widget (QStackedWidget): Container for different screens
+        network_widget (NetworkConfigWidget): WiFi configuration screen
+        face_tracking_widget (FaceTrackingWidget): Face tracking control screen
+        calibration_widget (CalibrationWidget): System calibration screen
+        camouflage_widget (CamouflageWidget): Camouflage pattern display screen
+        screensaver_widget (ScreenSaverWidget): Screensaver display screen
+    """
+
     def __init__(self):
         super().__init__()
         # self.brightness_manager = BrightnessManager()
@@ -143,11 +175,11 @@ class MainWindow(QMainWindow):
         # Stop face tracking only if it's active and running
         if hasattr(self, 'face_tracking_widget') and self.face_tracking_widget.is_tracking:
             self.face_tracking_widget.stop_tracking()
-        
+
         # Stop brightness manager if it exists
         if hasattr(self, 'brightness_manager'):
             self.brightness_manager.stop()
-        
+
         sys.exit(0)
 
     def switch_to_camouflage(self):

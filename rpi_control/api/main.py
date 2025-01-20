@@ -47,7 +47,12 @@ ASSETS_DIR.mkdir(parents=True, exist_ok=True)
 
 @app.get("/", tags=["health"])
 async def root():
-    """Health check endpoint. Does not require authentication."""
+    """
+    Health check endpoint to verify API availability.
+
+    Returns:
+        dict: Simple welcome message indicating API is operational
+    """
     return {"message": "Welcome to Cameo API"}
 
 

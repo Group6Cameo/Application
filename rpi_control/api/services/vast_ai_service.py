@@ -88,6 +88,15 @@ class VastAIService:
             return {"status": "error", "message": str(e)}
 
     async def create_instance(self) -> Dict[str, Any]:
+        """
+        Create a new VastAI instance.
+
+        Returns:
+            Dict[str, Any]: Response containing:
+                - status: "success" or "error"
+                - message: Description of the result
+                - details: Full response from VastAI API
+        """
         try:
             response = self.client.launch_instance(
                 num_gpus="1",

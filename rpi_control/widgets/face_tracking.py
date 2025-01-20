@@ -26,6 +26,23 @@ ZMQ_FACE_IDS_PORT = "5525"
 
 
 class MotorTrackingSystem:
+    """
+    Controls the servo motors for face tracking functionality.
+
+    This system manages:
+    - Servo motor positions and movements
+    - Face tracking calculations
+    - Motor calibration and deadzone handling
+
+    Attributes:
+        servo0_angle (float): Current angle of vertical servo
+        servo1_angle (float): Current angle of horizontal servo
+        arm_angle (float): Current angle of arm servos
+        deadzones (dict): Deadzone ranges for each servo
+        is_running (bool): Tracking system status
+        face_to_track (int): ID of face currently being tracked
+    """
+
     def __init__(self, servo_kit):
         # Get the absolute path to the project root directory
         self.project_root = os.path.dirname(os.path.dirname(
@@ -203,6 +220,23 @@ class FaceTrackingWorker(QThread):
 
 
 class FaceTrackingWidget(QWidget):
+    """
+    Widget for controlling face tracking functionality.
+
+    Provides UI controls for:
+    - Starting/stopping face tracking
+    - Selecting which face to track
+    - Displaying tracking status
+    - Managing servo motor control
+
+    Attributes:
+        kit (ServoKit): Interface to servo motors
+        face_tracker (MotorTrackingSystem): Tracking system instance
+        start_button (QPushButton): Control to start tracking
+        stop_button (QPushButton): Control to stop tracking
+        face_select (QComboBox): Dropdown to select face to track
+    """
+
     def __init__(self, parent=None):
         super().__init__(parent)
         # Add project root path
@@ -509,7 +543,7 @@ class FaceTrackingWidget(QWidget):
 
             if self.worker is not None:
                 self.worker = None
-                
+
             self.start_button.setEnabled(True)
             self.stop_button.setEnabled(False)
             self.is_tracking = False
