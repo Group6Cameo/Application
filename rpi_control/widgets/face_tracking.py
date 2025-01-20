@@ -502,13 +502,17 @@ class FaceTrackingWidget(QWidget):
     def on_tracking_finished(self):
         """Handle completion of tracking"""
         try:
-            if hasattr(self, 'face_tracker'):
+            # Only cleanup if face_tracker exists and is not None
+            if hasattr(self, 'face_tracker') and self.face_tracker is not None:
                 self.face_tracker.cleanup()
                 self.face_tracker = None
 
-            self.worker = None
+            if self.worker is not None:
+                self.worker = None
+                
             self.start_button.setEnabled(True)
             self.stop_button.setEnabled(False)
+            self.is_tracking = False
             print("Face tracking finished successfully")
 
         except Exception as e:
