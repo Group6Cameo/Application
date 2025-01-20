@@ -127,14 +127,15 @@ main() {
     pip install cmake || check_error "cmake installation"
     sudo apt install -y qtbase5-dev qttools5-dev-tools
     pip install --upgrade sip
-    sudo apt install python3-pyqt6
-    sudo apt-get install wmctrl
+    sudo apt install -y python3-pyqt6
+    sudo apt-get install -y wmctrl
+    sudo apt-get install -y xterm
     pip install -r requirements.txt || check_error "Python requirements installation"
     
     # 4. Hailo Installation
     progress "Installing Hailo components"
     sudo apt-get install -y hailo-all || check_error "Hailo installation"
-    sudo apt install rpicam-apps || check_error "rpicam-apps installation"
+    sudo apt install -y rpicam-apps || check_error "rpicam-apps installation"
     
     # 5. System Libraries
     progress "Installing system libraries"
@@ -231,19 +232,35 @@ create_startup() {
     cat > "$HOME_DIR/app.sh" << EOL
 #!/bin/bash
 
-REPO_DIR="$REPO_DIR"
-APP_DIR="$APP_DIR"
+# Wait for desktop environment to fully load
+sleep 1
 
-cd \$REPO_DIR
+# Set display environment variables
+export DISPLAY=:0
+export XAUTHORITY=/home/cameo/.Xauthority
 
-# Activate virtual environment
-source cameo/bin/activate
+REPO_DIR="/home/cameo/Desktop/Repos"
+APP_DIR="/home/cameo/Desktop/Repos/Application"
 
+# Ensure xterm is installed
+if ! command -v xterm &> /dev/null; then
+    sudo apt-get install -y xterm
+fi
 
-cd \$APP_DIR
-
-# Run the application
-python -m rpi_control.launcher
+# Open a new terminal and execute the commands
+xterm -display :0 -hold -e bash -c '
+    echo "Changing to repository directory..."
+    cd '"$REPO_DIR"'
+    
+    echo "Activating virtual environment..."
+    source cameo/bin/activate
+    
+    echo "Changing to application directory..."
+    cd '"$APP_DIR"'
+    
+    echo "Starting application..."
+    bash start.sh
+'
 EOL
 
     # Make app.sh executable
@@ -259,6 +276,7 @@ Type=Application
 Name=App
 Exec=/bin/bash $HOME_DIR/app.sh
 X-GNOME-Autostart-enabled=true
+Terminal=false
 EOL
 
     log_info "Startup configuration completed"
