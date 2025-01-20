@@ -25,7 +25,7 @@ A comprehensive framework for controlling Raspberry Pi-based camouflage displays
 
 1. Clone the repository:
 ```bash
-git clone [repository-url]
+git clone https://github.com/Group6Cameo/Application.git
 ```
 ```bash
 cd application
@@ -45,15 +45,16 @@ The setup script will:
 
 ## Project Structure
 
+```
 cameo-framework/
-├── rpi_control/ # Main application package
-│ ├── api/ # REST API implementation
-│ ├── utils/ # Utility functions
-│ ├── widgets/ # GUI components
-│ └── assets/ # Static assets
-├── scripts/ # Helper scripts
-└── requirements.txt # Python dependencies
-
+├── rpi_control/           # Main application package
+│   ├── api/              # REST API implementation
+│   ├── utils/            # Utility functions
+│   ├── widgets/          # GUI components
+│   └── assets/           # Static assets
+├── scripts/              # Helper scripts
+└── requirements.txt      # Python dependencies
+```
 
 ## Running the Application
 
