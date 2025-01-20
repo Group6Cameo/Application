@@ -140,8 +140,8 @@ class MainWindow(QMainWindow):
             self.menu_widget.hide()
 
     def close_app(self):
-        # Stop face tracking if active
-        if hasattr(self, 'face_tracking_widget'):
+        # Stop face tracking only if it's active and running
+        if hasattr(self, 'face_tracking_widget') and self.face_tracking_widget.is_tracking:
             self.face_tracking_widget.stop_tracking()
         
         # Stop brightness manager if it exists
