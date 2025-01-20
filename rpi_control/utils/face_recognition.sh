@@ -4,11 +4,15 @@ set -e
 function init_variables() {
     print_help_if_needed $@
     script_dir=$(dirname $(realpath "$0"))
-
-    readonly RESOURCES_DIR="/home/aoyamaxx/Desktop/Repos/tappas_face/resources"
+    
+    # Get current directory
+    readonly CUR_DIR=$(pwd)
+    
+    # Update paths with CUR_DIR
+    readonly RESOURCES_DIR="$CUR_DIR/resources"
     readonly CROPPER_SO="$RESOURCES_DIR/libvms_croppers.so"
 
-    readonly TEMP_DIR="/home/aoyamaxx/Desktop/Repos/tappas_face/tmp"
+    readonly TEMP_DIR="$CUR_DIR/tmp"
     readonly DETECTION_JSON_FILE="$TEMP_DIR/face_detection_output.json"
     readonly RECOGNITION_JSON_FILE="$TEMP_DIR/face_recognition_output.json"
 
