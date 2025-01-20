@@ -14,12 +14,13 @@ A comprehensive framework for controlling Raspberry Pi-based camouflage displays
 
 ## Prerequisites
 
-- Raspberry Pi (tested on RPi 5)
-- Python 3.7+
-- Hailo AI accelerator
+- Raspberry Pi 5
+- Python 3.11+
+- Hailo 8L (for RPi) AI accelerator
 - Servo motors (for tracking)
 - Display screen
 - Camera module
+- NVMe base
 
 ## Installation
 
@@ -90,8 +91,8 @@ The REST API is available at `http://<device-ip>:8000/api` and provides endpoint
 - Calibration management
 
 ## Development
-1. create a venv
-2. Install development dependencies: `pip install -e .`
+
+When developing, make sure you have the cameo venv activated.
 
 
 ## Contributing
