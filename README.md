@@ -29,7 +29,7 @@ A comprehensive framework for controlling Raspberry Pi-based camouflage displays
 git clone https://github.com/Group6Cameo/Application.git
 ```
 ```bash
-cd application
+cd Application
 ```
 
 2. Run the setup script:
