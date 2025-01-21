@@ -138,29 +138,35 @@ class VastAIService:
                 onstart_cmd="uvicorn app:app --host 0.0.0.0 --port 8000"
             )
             if response.status_code == 200:
-                instances = await self.get_instances()
-                if instances["status"] == "success":
-                    instance = instances["instances"][0]
-                    port = None
-                    if "ports" in instance:
-                        port_mappings = instance["ports"].get("8000/tcp", [])
-                        if port_mappings:
-                            port = port_mappings[0].get("HostPort")
+                # Wait for port to become available
+                max_retries = 30
+                retry_delay = 10
 
-                    # Construct the URL and wait for server to be ready
-                    if instance["public_ipaddr"] and port:
-                        server_url = f"http://{instance['public_ipaddr'][0]}:{port}"
-                        is_ready = await self._check_server_ready(server_url)
-                        if not is_ready:
-                            return {"status": "error", "message": "Server failed to start within timeout period"}
+                for _ in range(max_retries):
+                    instances = await self.get_instances()
+                    if instances["status"] == "success" and instances["instances"]:
+                        instance = instances["instances"][0]
+                        port = None
+                        if "ports" in instance:
+                            port_mappings = instance["ports"].get(
+                                "8000/tcp", [])
+                            if port_mappings:
+                                port = port_mappings[0].get("HostPort")
 
-                    return {
-                        "status": "success",
-                        "message": "Instance created and server is ready",
-                        "running_instance": [inst["id"] for inst in instances["instances"]],
-                        "public_ip": [inst["public_ipaddr"] for inst in instances["instances"]],
-                        "port": port
-                    }
+                        if port:
+                            return {
+                                "status": "success",
+                                "message": "Instance created and server is ready",
+                                "running_instance": [inst["id"] for inst in instances["instances"]],
+                                "public_ip": [inst["public_ipaddr"] for inst in instances["instances"]],
+                                "port": port
+                            }
+
+                        print(
+                            f"Waiting for port to become available... (retry in {retry_delay}s)")
+                        await asyncio.sleep(retry_delay)
+
+                return {"status": "error", "message": "Port did not become available within timeout period"}
             return {"status": "error", "message": "Instance creation failed"}
         except Exception as e:
             return {"status": "error", "message": str(e)}
