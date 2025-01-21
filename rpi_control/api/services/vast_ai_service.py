@@ -149,7 +149,7 @@ class VastAIService:
 
                     # Construct the URL and wait for server to be ready
                     if instance["public_ip"] and port:
-                        server_url = f"http://{instance['public_ip'][0]}:{port}"
+                        server_url = f"http://{instance['public_ipaddr'][0]}:{port}"
                         is_ready = await self._check_server_ready(server_url)
                         if not is_ready:
                             return {"status": "error", "message": "Server failed to start within timeout period"}
@@ -158,7 +158,7 @@ class VastAIService:
                         "status": "success",
                         "message": "Instance created and server is ready",
                         "running_instance": [inst["id"] for inst in instances["instances"]],
-                        "public_ip": [inst["public_ip"] for inst in instances["instances"]],
+                        "public_ip": [inst["public_ipaddr"] for inst in instances["instances"]],
                         "port": port
                     }
             return {"status": "error", "message": "Instance creation failed"}
