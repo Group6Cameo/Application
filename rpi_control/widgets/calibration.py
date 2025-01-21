@@ -167,14 +167,17 @@ class CalibrationWidget(QWidget):
         # Remove margins
         self.setContentsMargins(0, 0, 0, 0)
         self.layout.setContentsMargins(10, 10, 10, 10)
-
         self.setLayout(self.layout)
 
-        # Start polling for server
-        self.poll_timer = QTimer()
-        self.poll_timer.timeout.connect(self.check_server_status)
-        self.poll_timer.start(5000)  # Check every 5 seconds
-        self.check_server_status()  # Initial check
+        # Check if backend URL exists and show ready state immediately if it does
+        if get_backend_url():
+            self.show_ready_state()
+        else:
+            # Only start polling if we don't have a backend URL
+            self.poll_timer = QTimer()
+            self.poll_timer.timeout.connect(self.check_server_status)
+            self.poll_timer.start(5000)  # Check every 5 seconds
+            self.check_server_status()  # Initial check
 
     async def _check_server_ready(self, url: str) -> bool:
         """Check if the server is responding"""
