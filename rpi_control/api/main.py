@@ -16,6 +16,7 @@ import aiohttp
 import aiofiles
 import asyncio
 from rpi_control.api.services.vast_ai_service import VastAIService
+from rpi_control.utils.url_store import save_backend_url, get_backend_url
 
 # Initialize FastAPI app and VastAI service
 app = FastAPI(
@@ -44,6 +45,9 @@ async def startup_event():
     instance_ip = result["public_ip"][0]
     instance_port = result["port"]
     BACKEND_URL = f"http://{instance_ip}:{instance_port}/generate-camouflage"
+
+    # Save the backend URL
+    save_backend_url(BACKEND_URL)
     print(f"Backend URL set to: {BACKEND_URL}")
 
 # Configure CORS to allow all origins

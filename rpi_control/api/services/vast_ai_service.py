@@ -16,6 +16,10 @@ import os
 from dotenv import load_dotenv
 from vastai import VastAI
 from typing import Dict, Any
+import aiohttp
+import asyncio
+import time
+from ...utils.url_store import get_backend_url
 
 load_dotenv()
 
@@ -97,6 +101,32 @@ class VastAIService:
         except Exception as e:
             return {"status": "error", "message": str(e)}
 
+    async def _check_server_ready(self, url: str, max_retries: int = 30, delay: int = 10) -> bool:
+        """
+        Poll the server until it responds or max retries is reached.
+
+        Args:
+            url (str): The URL to check
+            max_retries (int): Maximum number of retry attempts
+            delay (int): Delay between retries in seconds
+
+        Returns:
+            bool: True if server is responding, False otherwise
+        """
+        # Get the backend URL for health check
+        backend_url = f"{url}/"  # Add trailing slash for root endpoint
+
+        async with aiohttp.ClientSession() as session:
+            for _ in range(max_retries):
+                try:
+                    async with session.get(backend_url) as response:
+                        if response.status == 200:
+                            return True
+                except aiohttp.ClientError:
+                    pass
+                await asyncio.sleep(delay)
+            return False
+
     async def create_instance(self) -> Dict[str, Any]:
         try:
             response = self.client.launch_instance(
@@ -110,18 +140,23 @@ class VastAIService:
             if response.status_code == 200:
                 instances = await self.get_instances()
                 if instances["status"] == "success":
-                    # Get the most recently created instance
                     instance = instances["instances"][0]
-                    # Extract the port mapping for internal port 8000
                     port = None
                     if "ports" in instance:
                         port_mappings = instance["ports"].get("8000/tcp", [])
                         if port_mappings:
                             port = port_mappings[0].get("HostPort")
 
+                    # Construct the URL and wait for server to be ready
+                    if instance["public_ip"] and port:
+                        server_url = f"http://{instance['public_ip'][0]}:{port}"
+                        is_ready = await self._check_server_ready(server_url)
+                        if not is_ready:
+                            return {"status": "error", "message": "Server failed to start within timeout period"}
+
                     return {
                         "status": "success",
-                        "message": "Instance created",
+                        "message": "Instance created and server is ready",
                         "running_instance": [inst["id"] for inst in instances["instances"]],
                         "public_ip": [inst["public_ip"] for inst in instances["instances"]],
                         "port": port

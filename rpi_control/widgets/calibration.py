@@ -1,11 +1,16 @@
-from PyQt6.QtWidgets import QWidget, QPushButton, QVBoxLayout
+from PyQt6.QtWidgets import (QWidget, QPushButton, QVBoxLayout,
+                             QLabel, QProgressBar)
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QPainter, QPixmap, QPalette, QColor
 import pkg_resources
 import qrcode
 from ..utils.network_info import get_ip_address, get_public_url
+from ..utils.url_store import get_backend_url
 from PyQt6.QtWidgets import QDialog
 from PyQt6.QtCore import QEvent
+import aiohttp
+import asyncio
+from functools import partial
 
 
 class QRDialog(QDialog):
@@ -34,7 +39,8 @@ class QRDialog(QDialog):
         self.qr_pixmap = QPixmap("/tmp/temp_qr.png")
 
         # Set fixed size for dialog
-        self.setFixedSize(self.qr_pixmap.width() + 40, self.qr_pixmap.height() + 40)
+        self.setFixedSize(self.qr_pixmap.width() + 40,
+                          self.qr_pixmap.height() + 40)
 
         # Create main layout
         layout = QVBoxLayout()
@@ -78,7 +84,8 @@ class QRDialog(QDialog):
             QEvent.Type.MouseButtonDblClick,
             QEvent.Type.WindowStateChange  # Added this event
         ]:
-            QTimer.singleShot(100, self._ensure_on_top)  # Use timer to ensure window activation
+            # Use timer to ensure window activation
+            QTimer.singleShot(100, self._ensure_on_top)
             return True
         return super().eventFilter(obj, event)
 
@@ -104,8 +111,7 @@ class QRDialog(QDialog):
 class CalibrationWidget(QWidget):
     def __init__(self):
         super().__init__()
-        # Create layout
-        layout = QVBoxLayout()
+        self.layout = QVBoxLayout()
 
         # Get the absolute path to the assets directory
         assets_path = pkg_resources.resource_filename(
@@ -118,22 +124,92 @@ class CalibrationWidget(QWidget):
         palette.setColor(QPalette.ColorRole.Window, QColor('#002103'))
         self.setPalette(palette)
 
-        # Create QR code button
+        # Create loading message
+        self.loading_label = QLabel("Initializing camouflage engine...")
+        self.loading_label.setStyleSheet("""
+            QLabel {
+                color: white;
+                font-size: 18px;
+                font-weight: bold;
+            }
+        """)
+        self.loading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        # Create progress bar
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setStyleSheet("""
+            QProgressBar {
+                border: 2px solid grey;
+                border-radius: 5px;
+                text-align: center;
+            }
+            QProgressBar::chunk {
+                background-color: #4CAF50;
+            }
+        """)
+        self.progress_bar.setMinimum(0)
+        self.progress_bar.setMaximum(0)  # Infinite progress bar
+
+        # Create QR code button (initially hidden)
         self.qr_button = QPushButton("Show Upload QR Code")
         self.qr_button.clicked.connect(self.show_qr_code)
-        self.qr_button.setFixedSize(200, 40)  # Set fixed size for button
+        self.qr_button.setFixedSize(200, 40)
+        self.qr_button.hide()  # Initially hidden
 
-        # Add button to layout
-        layout.addWidget(
-            self.qr_button, alignment=Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignRight)
+        # Add widgets to layout
+        self.layout.addWidget(self.loading_label)
+        self.layout.addWidget(self.progress_bar)
+        self.layout.addWidget(
+            self.qr_button,
+            alignment=Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignRight
+        )
 
-        # Remove any margins for the widget itself
+        # Remove margins
         self.setContentsMargins(0, 0, 0, 0)
+        self.layout.setContentsMargins(10, 10, 10, 10)
 
-        # Set layout margins to position button
-        layout.setContentsMargins(10, 10, 10, 10)
+        self.setLayout(self.layout)
 
-        self.setLayout(layout)
+        # Start polling for server
+        self.poll_timer = QTimer()
+        self.poll_timer.timeout.connect(self.check_server_status)
+        self.poll_timer.start(5000)  # Check every 5 seconds
+        self.check_server_status()  # Initial check
+
+    async def _check_server_ready(self, url: str) -> bool:
+        """Check if the server is responding"""
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    return response.status == 200
+        except:
+            return False
+
+    def check_server_status(self):
+        """Poll the server and update UI accordingly"""
+        url = f"{get_backend_url()}"
+
+        async def check():
+            is_ready = await self._check_server_ready(url)
+            # Use partial to safely call from async context
+            if is_ready:
+                self.poll_timer.stop()
+                QTimer.singleShot(0, partial(self.show_ready_state))
+
+        # Create event loop if necessary
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+        loop.run_until_complete(check())
+
+    def show_ready_state(self):
+        """Show the ready state UI"""
+        self.loading_label.hide()
+        self.progress_bar.hide()
+        self.qr_button.show()
 
     def show_qr_code(self):
         url = f"{get_public_url()}/static/upload.html"
@@ -142,15 +218,15 @@ class CalibrationWidget(QWidget):
 
     def paintEvent(self, event):
         painter = QPainter(self)
-
-        # Ensure no antialiasing or other effects
         painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, False)
-
-        # Fill background with dark green first
         painter.fillRect(0, 0, self.width(), self.height(), QColor('#002103'))
 
-        # Scale and draw image
-        scaled_image = self.image.scaled(self.width(), self.height(),
-                                         Qt.AspectRatioMode.IgnoreAspectRatio,
-                                         Qt.TransformationMode.FastTransformation)
-        painter.drawPixmap(0, 0, scaled_image)
+        # Only draw the calibration image if we're in ready state
+        if not self.loading_label.isVisible():
+            scaled_image = self.image.scaled(
+                self.width(),
+                self.height(),
+                Qt.AspectRatioMode.IgnoreAspectRatio,
+                Qt.TransformationMode.FastTransformation
+            )
+            painter.drawPixmap(0, 0, scaled_image)
