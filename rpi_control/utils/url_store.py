@@ -6,6 +6,12 @@ from pathlib import Path
 URL_STORE_PATH = Path("/tmp/cameo_backend_url.json")
 
 
+def clean_backend_url() -> None:
+    """Remove any existing backend URL file."""
+    if URL_STORE_PATH.exists():
+        URL_STORE_PATH.unlink()
+
+
 def save_backend_url(url: str) -> None:
     """Save the backend URL to a file."""
     URL_STORE_PATH.write_text(json.dumps({"backend_url": url}))

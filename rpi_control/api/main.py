@@ -16,7 +16,7 @@ import aiohttp
 import aiofiles
 import asyncio
 from rpi_control.api.services.vast_ai_service import VastAIService
-from rpi_control.utils.url_store import save_backend_url, get_backend_url
+from rpi_control.utils.url_store import save_backend_url, get_backend_url, clean_backend_url
 
 # Initialize FastAPI app and VastAI service
 app = FastAPI(
@@ -24,6 +24,8 @@ app = FastAPI(
     description="API for managing Cameo's camouflage model",
     version="1.0.0"
 )
+
+# Clean up any existing backend URL
 
 # Add VastAI service initialization
 vast_service = VastAIService()
@@ -36,6 +38,7 @@ BACKEND_URL = None
 async def startup_event():
     """Initialize VastAI instance and set backend URL on startup"""
     global BACKEND_URL
+    clean_backend_url()
     result = await vast_service.create_instance()
     if result["status"] != "success":
         raise RuntimeError(
