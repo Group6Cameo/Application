@@ -148,7 +148,7 @@ class VastAIService:
                             port = port_mappings[0].get("HostPort")
 
                     # Construct the URL and wait for server to be ready
-                    if instance["public_ip"] and port:
+                    if instance["public_ipaddr"] and port:
                         server_url = f"http://{instance['public_ipaddr'][0]}:{port}"
                         is_ready = await self._check_server_ready(server_url)
                         if not is_ready:
