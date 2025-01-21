@@ -15,13 +15,36 @@ from pathlib import Path
 import aiohttp
 import aiofiles
 import asyncio
+from rpi_control.api.services.vast_ai_service import VastAIService
 
-# Initialize FastAPI app
+# Initialize FastAPI app and VastAI service
 app = FastAPI(
     title="Cameo API",
     description="API for managing Cameo's camouflage model",
     version="1.0.0"
 )
+
+# Add VastAI service initialization
+vast_service = VastAIService()
+
+# Global variable for backend URL
+BACKEND_URL = None
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize VastAI instance and set backend URL on startup"""
+    global BACKEND_URL
+    result = await vast_service.create_instance()
+    if result["status"] != "success":
+        raise RuntimeError(
+            f"Failed to create VastAI instance: {result['message']}")
+
+    # Extract IP and port from the response
+    instance_ip = result["public_ip"][0]
+    instance_port = result["port"]
+    BACKEND_URL = f"http://{instance_ip}:{instance_port}/generate-camouflage"
+    print(f"Backend URL set to: {BACKEND_URL}")
 
 # Configure CORS to allow all origins
 app.add_middleware(
@@ -38,7 +61,6 @@ app.mount("/static", StaticFiles(directory="rpi_control/static"), name="static")
 # Add these constants near the top with other imports
 UPLOAD_DIR = Path("/tmp/cameo_uploads")
 ASSETS_DIR = Path("rpi_control/assets/camouflage")
-BACKEND_URL = "http://185.150.27.254:27458/generate-camouflage"  # Placeholder URL
 
 # Ensure directories exist
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)

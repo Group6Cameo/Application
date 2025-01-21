@@ -15,7 +15,7 @@ Usage:
 import os
 from dotenv import load_dotenv
 from vastai import VastAI
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 load_dotenv()
 
@@ -87,28 +87,45 @@ class VastAIService:
         except Exception as e:
             return {"status": "error", "message": str(e)}
 
-    async def create_instance(self) -> Dict[str, Any]:
-        """
-        Create a new VastAI instance.
+    async def get_instances(self) -> Dict[str, Any]:
+        try:
+            response = self.client.show_instances()
+            return {
+                "status": "success",
+                "instances": response
+            }
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
 
-        Returns:
-            Dict[str, Any]: Response containing:
-                - status: "success" or "error"
-                - message: Description of the result
-                - details: Full response from VastAI API
-        """
+    async def create_instance(self) -> Dict[str, Any]:
         try:
             response = self.client.launch_instance(
-                num_gpus="1",
-                gpu_name="RTX_A4000",
-                image="pytorch/pytorch:2.1.1-cuda12.1-cudnn8-runtime",
+                num_gpus='1',
+                gpu_name="RTX_3090",
+                image="montijnb/cameosmall:v5",
+                disk="40",
+                min_cuda="12.4",
+                onstart_cmd="uvicorn app:app --host 0.0.0.0 --port 8000"
             )
-            if response["status"] == "success":
-                return {
-                    "status": "success",
-                    "message": "Instance created",
-                    "details": response
-                }
+            if response.status_code == 200:
+                instances = await self.get_instances()
+                if instances["status"] == "success":
+                    # Get the most recently created instance
+                    instance = instances["instances"][0]
+                    # Extract the port mapping for internal port 8000
+                    port = None
+                    if "ports" in instance:
+                        port_mappings = instance["ports"].get("8000/tcp", [])
+                        if port_mappings:
+                            port = port_mappings[0].get("HostPort")
+
+                    return {
+                        "status": "success",
+                        "message": "Instance created",
+                        "running_instance": [inst["id"] for inst in instances["instances"]],
+                        "public_ip": [inst["public_ip"] for inst in instances["instances"]],
+                        "port": port
+                    }
             return {"status": "error", "message": "Instance creation failed"}
         except Exception as e:
             return {"status": "error", "message": str(e)}
