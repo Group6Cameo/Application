@@ -180,20 +180,24 @@ class CalibrationWidget(QWidget):
             self.check_server_status()  # Initial check
 
     async def _check_server_ready(self, url: str) -> bool:
-        """Check if the server is responding"""
+        """Check if the server is healthy"""
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(url) as response:
-                    return response.status == 200
+                async with session.get(f"{url}/health") as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        return data.get("status") == "healthy"
         except:
             return False
 
     def check_server_status(self):
         """Poll the server and update UI accordingly"""
-        url = f"{get_backend_url()}"
+        backend_url = get_backend_url()
+        if not backend_url:
+            return  # Keep polling if backend URL isn't set yet
 
         async def check():
-            is_ready = await self._check_server_ready(url)
+            is_ready = await self._check_server_ready(backend_url)
             # Use partial to safely call from async context
             if is_ready:
                 self.poll_timer.stop()

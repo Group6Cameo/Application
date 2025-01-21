@@ -44,7 +44,7 @@ async def startup_event():
     # Extract IP and port from the response
     instance_ip = result["public_ip"][0]
     instance_port = result["port"]
-    BACKEND_URL = f"http://{instance_ip}:{instance_port}/generate-camouflage"
+    BACKEND_URL = f"http://{instance_ip}:{instance_port}"
 
     # Save the backend URL
     save_backend_url(BACKEND_URL)
@@ -140,7 +140,7 @@ async def process_image(
                                 content_type=file.content_type)
 
             async with aiohttp.ClientSession() as session:
-                async with session.get(BACKEND_URL, data=form_data, timeout=60) as response:
+                async with session.get(f"{BACKEND_URL}/generate-camouflage", data=form_data, timeout=60) as response:
                     if response.status != 200:
                         raise HTTPException(
                             status_code=response.status,
