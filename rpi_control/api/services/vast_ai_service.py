@@ -20,6 +20,7 @@ import aiohttp
 import asyncio
 import time
 from ...utils.url_store import get_backend_url
+import random
 
 load_dotenv()
 
@@ -31,6 +32,7 @@ class VastAIService:
     Attributes:
         api_key (str): VastAI API key from environment
         client (VastAI): Initialized VastAI client instance
+        gpu_options (list): List of available GPU options
     """
 
     def __init__(self):
@@ -40,6 +42,14 @@ class VastAIService:
             raise RuntimeError(
                 "VAST_AI_API_KEY environment variable is not set")
         self.client = VastAI(api_key=str(self.api_key))
+        self.gpu_options = [
+            "RTX_3090",
+            "RTX_4080",
+            "RTX_3080_Ti",
+            "RTX_3080",
+            "A5000",
+            "RTX_A4000"
+        ]
         print("VAST AI SERVICE INITIALIZED")
 
     async def start_instance(self, instance_id: int) -> Dict[str, Any]:
@@ -129,9 +139,10 @@ class VastAIService:
 
     async def create_instance(self) -> Dict[str, Any]:
         try:
+            selected_gpu = random.choice(self.gpu_options)
             response = self.client.launch_instance(
                 num_gpus='2',
-                gpu_name="RTX_3090",
+                gpu_name=selected_gpu,
                 image="montijnb/cameosmall:v5",
                 disk="40",
                 min_cuda="12.4",
