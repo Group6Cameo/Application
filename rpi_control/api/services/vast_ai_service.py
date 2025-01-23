@@ -130,7 +130,7 @@ class VastAIService:
     async def create_instance(self) -> Dict[str, Any]:
         try:
             response = self.client.launch_instance(
-                num_gpus='1',
+                num_gpus='2',
                 gpu_name="RTX_3090",
                 image="montijnb/cameosmall:v5",
                 disk="40",
