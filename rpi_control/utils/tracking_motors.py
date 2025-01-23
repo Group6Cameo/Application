@@ -14,7 +14,7 @@ CSV_PATH = os.path.join(WORKING_DIR, 'tmp', 'face_info_log.csv')
 IMAGE_WIDTH = 640
 IMAGE_HEIGHT = 360
 
-INITIAL_SERVO0_ANGLE = 120
+INITIAL_SERVO0_ANGLE = 90
 INITIAL_SERVO1_ANGLE = 95
 INITIAL_ARM_ANGLE = 90
 
@@ -265,7 +265,7 @@ def cleanup_servos():
     Smoothly move servos back to 90 degrees.
     """
     global servo0_angle, servo1_angle, arm_angle
-    target0, target1, targetA = 90, 90, 90
+    target0, target1, targetA = 90, 95, 90
     steps = 10
     delay = 0.01
 

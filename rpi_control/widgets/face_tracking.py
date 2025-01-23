@@ -14,7 +14,7 @@ import json
 # Constants from tracking_motors.py
 IMAGE_WIDTH = 640
 IMAGE_HEIGHT = 480  # Changed to match camera resolution
-INITIAL_SERVO0_ANGLE = 120
+INITIAL_SERVO0_ANGLE = 90
 INITIAL_SERVO1_ANGLE = 95
 INITIAL_ARM_ANGLE = 90
 DEADZONE_X = 60
@@ -165,7 +165,7 @@ class MotorTrackingSystem:
     def cleanup(self):
         self.stop_tracking_motors()
         # Move servos back to neutral positions smoothly
-        target0, target1, targetA = 90, 90, 90
+        target0, target1, targetA = 90, 95, 90
         steps = 10
         delay = 0.01
 
