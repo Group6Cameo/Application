@@ -1,6 +1,6 @@
 # Cameo Framework
 
-A comprehensive framework for controlling Raspberry Pi-based camouflage displays with face tracking capabilities.
+A comprehensive framework for controlling Raspberry Pi-based adaptive camouflage displays with face tracking and recognition capabilities.
 
 ## Features
 
