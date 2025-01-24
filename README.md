@@ -17,11 +17,12 @@ A comprehensive framework for controlling Raspberry Pi-based camouflage displays
 - Raspberry Pi 5
 - Raspberry Pi OS (64-bit)
 - Python 3.11+
-- Hailo 8L (for RPi) AI accelerator
-- Servo motors (for tracking)
-- Display screen
-- Camera module
-- NVMe base
+- Hailo 8L NVMe M.2 AI accelerator
+- Raspberry Pi NVMe Base
+- Servo Motors (for tracking)
+- Display Screen
+- Pi Camera Module 3
+- Adafruit 16-Channel PWM / Servo HAT for Raspberry Pi
 
 ## Installation
 
