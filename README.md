@@ -41,7 +41,7 @@ The setup script will:
 - Install system dependencies
 - Create Python virtual environment
 - Install Python packages
-- Configure Hailo components
+- Configure Hailo TAPPAS
 - Set up autostart services
 
 ## Project Structure
