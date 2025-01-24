@@ -51,13 +51,13 @@ check_error() {
 # Check system requirements
 check_system_requirements() {
     log_info "Checking system requirements..."
-    
+
     # Check Python version
     if ! command -v python3 >/dev/null 2>&1; then
         log_error "Python3 is required but not installed"
         exit 1
     fi
-    
+
     # Check available disk space (minimum 10GB)
     available_space=$(df -BG . | tail -n 1 | awk '{print $4}' | sed 's/G//')
     if [ "$available_space" -lt 10 ]; then
@@ -67,7 +67,7 @@ check_system_requirements() {
             exit 1
         fi
     fi
-    
+
     # Check internet connection
     if ! ping -c 1 google.com >/dev/null 2>&1; then
         log_error "No internet connection"
@@ -88,21 +88,21 @@ progress() {
 main() {
     # Initial checks
     check_system_requirements
-    
+
     # Exit on error
     set -e
-    
+
     # 1. System update
     progress "Updating system packages"
     sudo apt update || check_error "System update"
     sudo apt upgrade -y || check_error "System upgrade"
-    
+
     sudo apt install -y python3-picamera2 || check_error "picamera2 installation"
-    
+
     # 2. Virtual Environment Setup
     progress "Setting up Python virtual environment"
     sudo apt install -y python3-venv || check_error "venv installation"
-    
+
     if [ -d "../cameo" ]; then
         log_warn "Virtual environment already exists"
         read -p "Do you want to delete and recreate it? (Y/n): " choice
@@ -115,9 +115,9 @@ main() {
     else
         python3 -m venv ../cameo --system-site-packages || check_error "Virtual environment creation"
     fi
-    
+
     source ../cameo/bin/activate || check_error "Virtual environment activation"
-    
+
     # 3. Python Dependencies
     progress "Installing Python dependencies"
     pip install --upgrade pip || check_error "pip upgrade"
@@ -128,12 +128,12 @@ main() {
     sudo apt-get install -y wmctrl
     sudo apt-get install -y xterm
     pip install -r requirements.txt || check_error "Python requirements installation"
-    
+
     # 4. Hailo Installation
     progress "Installing Hailo components"
     sudo apt-get install -y hailo-all || check_error "Hailo installation"
     sudo apt install -y rpicam-apps || check_error "rpicam-apps installation"
-    
+
     # 5. System Libraries
     progress "Installing system libraries"
     sudo apt-get install -y \
@@ -147,7 +147,7 @@ main() {
         gstreamer1.0-x gstreamer1.0-alsa gstreamer1.0-gl gstreamer1.0-gtk3 \
         gstreamer1.0-qt5 gstreamer1.0-pulseaudio python3-gi python3-gi-cairo \
         gir1.2-gtk-3.0 gstreamer1.0-libcamera || check_error "System libraries installation"
-    
+
     # 6. Repository Setup
     progress "Cloning and setting up repositories"
     cd ../
@@ -163,12 +163,12 @@ main() {
     else
         git clone https://github.com/Aoyamaxx/tappas_gcc12 || check_error "Repository cloning"
     fi
-    
+
     cd tappas_gcc12
     mkdir hailort
     git clone https://github.com/hailo-ai/hailort.git hailort/sources
     ./install.sh --skip-hailort --target-platform rpi || check_error "tappas installation"
-    
+
     # hailo-rpi5-examples installation
     # cd ../
     # if [ -d "hailo-rpi5-examples" ]; then
@@ -186,32 +186,32 @@ main() {
     #     git clone https://github.com/hailo-ai/hailo-rpi5-examples.git || check_error "hailo-rpi5-examples cloning"
     #     cd hailo-rpi5-examples
     # fi
-    
+
     # # Install hailo-rpi5-examples
     # ./install.sh || check_error "hailo-rpi5-examples installation"
-    
+
     # 7. Final Setup
     progress "Performing final setup"
     cd ../
     cd Application
     pip install -e . || check_error "Application installation"
-    
+
     # 8. Verification
     progress "Verifying installation"
     python3 -c "import cv2; print('OpenCV Version:', cv2.__version__)" || check_error "OpenCV verification"
-    
+
     # Install window management tools
     progress "Installing window management tools"
     sudo apt-get install -y wmctrl
-    
+
     # Install Qt and Wayland dependencies
     progress "Installing Qt and Wayland dependencies"
     sudo apt-get install -y qt6-wayland
     sudo apt-get install -y python3-pyqt6
-    
+
     # Fix runtime directory permissions
     sudo chmod 700 /run/user/1000
-    
+
     log_info "Installation completed successfully!"
 }
 
@@ -224,7 +224,7 @@ fi
 # After successful installation, create startup script
 create_startup() {
     log_info "Creating startup script..."
-    
+
     # Create app.sh
     cat > "$HOME_DIR/app.sh" << EOL
 #!/bin/bash
@@ -255,7 +255,7 @@ fi
 xterm -display :0 -hold -e bash -c '
     echo "Changing to application directory..."
     cd '"$APP_DIR"'
-    
+
     echo "Starting application..."
     bash start.sh
 '
@@ -263,10 +263,10 @@ EOL
 
     # Make app.sh executable
     chmod +x "$HOME_DIR/app.sh"
-    
+
     # Create autostart directory
     mkdir -p "$HOME_DIR/.config/autostart"
-    
+
     # Create desktop entry file
     cat > "$HOME_DIR/.config/autostart/app.desktop" << EOL
 [Desktop Entry]
@@ -278,7 +278,7 @@ Terminal=false
 EOL
 
     log_info "Startup configuration completed"
-    
+
     # Create desktop shortcut
     cat > "$HOME_DIR/Desktop/Start_App.desktop" << EOL
 [Desktop Entry]
@@ -294,7 +294,7 @@ EOL
 
     # Make desktop shortcut executable
     chmod +x "$HOME_DIR/Desktop/Start_App.desktop"
-    
+
     log_info "Desktop shortcut created"
 }
 

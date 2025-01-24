@@ -1,10 +1,50 @@
+"""
+WiFi network management utility for the RPI control system.
+
+This module provides a platform-independent interface for WiFi operations,
+supporting both macOS (development) and Linux/Raspberry Pi systems. It handles:
+- Network scanning and discovery
+- Connection management
+- Current connection status monitoring
+- Enterprise and WPA/WEP authentication
+
+The module uses system-specific commands (nmcli on Linux, airport on macOS)
+to interact with wireless interfaces, providing a consistent API across platforms.
+
+Dependencies:
+    - subprocess for system command execution
+    - platform for OS detection
+    - re for parsing command output
+"""
+
 import subprocess
 import re
 import platform
 
 
 class WifiManager:
+    """
+    A platform-independent WiFi network management interface.
+
+    Provides methods for scanning, connecting to, and monitoring WiFi networks
+    across different operating systems. Handles different authentication methods
+    and network security types automatically.
+    """
+
     def scan_networks(self):
+        """
+        Scan for available WiFi networks in range.
+
+        Returns:
+            list: A deduplicated list of available network SSIDs
+
+        The method adapts its behavior based on the operating system:
+        - On macOS: Uses airport utility
+        - On Linux: Uses iwlist scanning
+
+        Note:
+            Returns an empty list if scanning fails or requires elevated privileges
+        """
         try:
             if platform.system() == 'Darwin':  # macOS
                 cmd = "/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -s | awk '{print $1}'"
@@ -28,6 +68,23 @@ class WifiManager:
             return []
 
     def connect_to_network(self, ssid, username=None, password=None):
+        """
+        Attempt to connect to a specified WiFi network.
+
+        Args:
+            ssid (str): The SSID of the network to connect to
+            username (str, optional): Username for enterprise networks
+            password (str, optional): Network password for secured networks
+
+        Returns:
+            bool: True if connection successful, False otherwise
+
+        Features:
+            - Checks if already connected to requested network
+            - Auto-detects network security type (WPA, WEP, Enterprise)
+            - Prompts for credentials if needed and not provided
+            - Verifies successful connection
+        """
         try:
             # First check if we're already connected to this network
             current_connection = subprocess.check_output(
@@ -85,6 +142,19 @@ class WifiManager:
             return False
 
     def get_current_network(self):
+        """
+        Get the SSID of the currently connected network.
+
+        Returns:
+            str: The SSID of the connected network
+            None: If not connected or unable to determine connection status
+
+        Uses nmcli to query active connections and extracts the current
+        network SSID. Handles errors silently and returns None on failure.
+
+        An SSID is a unique identifier for a WiFi network, typically a string of characters
+        that represents the name of the network.
+        """
         try:
             output = subprocess.check_output(
                 "nmcli -t -f ACTIVE,SSID dev wifi | grep '^yes'",

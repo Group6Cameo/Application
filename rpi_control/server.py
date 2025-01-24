@@ -1,3 +1,7 @@
+"""
+This script is used (mainly in development) to start the FastAPI server.
+"""
+
 import uvicorn
 from rpi_control.api.main import app
 
