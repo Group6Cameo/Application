@@ -34,7 +34,7 @@ cd Application
 
 2. Run the setup script:
 ```bash
-sudo bash setup.sh
+bash setup.sh
 ```
 
 The setup script will:
