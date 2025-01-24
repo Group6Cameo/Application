@@ -109,6 +109,3 @@ MIT
 ## Support
 
 For issues and support, please create an issue in the GitHub repository.
-
-
-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
