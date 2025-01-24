@@ -44,8 +44,9 @@ check_error() {
 
 # Check if script is run with sudo
 check_sudo() {
-    if [ "$EUID" -ne 0 ]; then
-        log_error "Please run with sudo"
+    # Invert the logic: if EUID == 0, it means sudo (or root), so exit
+    if [ "$EUID" -eq 0 ]; then
+        log_error "Please do not run this script with sudo. Exiting..."
         exit 1
     fi
 }
