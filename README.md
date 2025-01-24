@@ -15,6 +15,7 @@ A comprehensive framework for controlling Raspberry Pi-based camouflage displays
 ## Prerequisites
 
 - Raspberry Pi 5
+- Raspberry Pi OS (64-bit)
 - Python 3.11+
 - Hailo 8L (for RPi) AI accelerator
 - Servo motors (for tracking)
