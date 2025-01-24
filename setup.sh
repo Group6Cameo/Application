@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+if [ "$EUID" -eq 0 ]; then
+    echo -e "\033[0;31m[ERROR]\033[0m Please do not run this script with sudo"
+    echo -e "Usage: bash setup.sh"
+    exit 1
+fi
+
 # Color codes for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -38,15 +44,6 @@ log_error() {
 check_error() {
     if [ $? -ne 0 ]; then
         log_error "$1 failed"
-        exit 1
-    fi
-}
-
-# Check if script is run with sudo
-check_sudo() {
-    # Invert the logic: if EUID == 0, it means sudo (or root), so exit
-    if [ "$EUID" -eq 0 ]; then
-        log_error "Please do not run this script with sudo. Exiting..."
         exit 1
     fi
 }
