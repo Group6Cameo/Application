@@ -172,7 +172,7 @@ def get_latest_csv_row(csv_path):
 
         header = rows[0]
         data_lines = rows[1:]
-        
+
         # The second column is 'Rec_BufferSet' => index=1
         # We'll parse it as an integer and find the maximum
         valid_lines = []
@@ -188,7 +188,7 @@ def get_latest_csv_row(csv_path):
 
         if not valid_lines:
             return None
-        
+
         # Sort by offset ascending, last item has the largest offset
         valid_lines.sort(key=lambda x: x[0])
         max_offset, max_row = valid_lines[-1]
@@ -205,24 +205,24 @@ def check_detection_conflicts(gallery_id, detection_id, center_x, center_y):
     """
     global detection_conflicts, current_override
     current_time = time.time()
-    
+
     # Initialize or clean old entries
     if gallery_id not in detection_conflicts:
         detection_conflicts[gallery_id] = []
-    
+
     # Remove old entries (older than DETECTION_WINDOW)
     detection_conflicts[gallery_id] = [
         entry for entry in detection_conflicts[gallery_id]
         if current_time - entry[0] < DETECTION_WINDOW
     ]
-    
+
     # Add new detection
     detection_conflicts[gallery_id].append((current_time, detection_id, center_x, center_y))
-    
+
     # Check for conflicts in the current window
     recent_detections = detection_conflicts[gallery_id]
     unique_detection_ids = set(entry[1] for entry in recent_detections)
-    
+
     # If we have conflicts and enough samples
     if len(unique_detection_ids) > 1 and len(recent_detections) >= CONFLICT_THRESHOLD:
         # Group detections by detection_id
@@ -232,32 +232,32 @@ def check_detection_conflicts(gallery_id, detection_id, center_x, center_y):
             if det_id not in detection_groups:
                 detection_groups[det_id] = []
             detection_groups[det_id].append((x, y))
-        
+
         # Find the detection_id closest to center
         closest_id = None
         min_distance = float('inf')
-        
+
         for det_id, positions in detection_groups.items():
             # Calculate average position for this detection_id
             avg_x = sum(x for x, _ in positions) / len(positions)
             avg_y = sum(y for y, _ in positions) / len(positions)
-            
+
             # Calculate distance to center
             distance = ((avg_x - CENTRE_X) ** 2 + (avg_y - CENTRE_Y) ** 2) ** 0.5
-            
+
             if distance < min_distance:
                 min_distance = distance
                 closest_id = det_id
-        
+
         current_override = closest_id
         print(f"Conflict detected for Gallery ID {gallery_id}. Using closest Detection ID: {closest_id}")
         return closest_id
-    
+
     # If no conflicts in window, clear override
     if len(unique_detection_ids) == 1 and current_override:
         print(f"Conflict resolved for Gallery ID {gallery_id}. Returning to normal tracking.")
         current_override = None
-    
+
     return detection_id
 
 def cleanup_servos():
@@ -273,7 +273,7 @@ def cleanup_servos():
         servo0_angle += (target0 - servo0_angle) / (steps - i)
         servo1_angle += (target1 - servo1_angle) / (steps - i)
         arm_angle += (targetA - arm_angle) / (steps - i)
-        
+
         set_servo_angle_with_deadzone(0, servo0_angle, 'servo0')
         set_servo_angle_with_deadzone(1, servo1_angle, 'servo1')
         set_arm_angle_with_deadzone(arm_angle)
@@ -390,8 +390,8 @@ def auto_regression_logic():
     # we don't forcibly revert to '1'.
     # ===========================================
     if (
-        TARGET_GALLERY_ID != '1' 
-        and '1' in active_list 
+        TARGET_GALLERY_ID != '1'
+        and '1' in active_list
         and LAST_MANUAL_TARGET_ID == '1'
     ):
         TARGET_GALLERY_ID = '1'
@@ -420,7 +420,7 @@ def track_face():
     while True:
         try:
             current_time = time.time()
-            
+
             # Periodically check if there's a new manual target update
             if current_time - last_check_time >= ID_CHECK_INTERVAL:
                 check_and_update_manual_target()
@@ -446,7 +446,7 @@ def track_face():
                     update_last_seen(gallery_id)
 
                 # If row matches the currently targeted gallery
-                if (gallery_id == TARGET_GALLERY_ID and 
+                if (gallery_id == TARGET_GALLERY_ID and
                     detection_id not in [None, '', 'null'] and
                     center_x_str not in [None, '', 'null'] and
                     center_y_str not in [None, '', 'null']):
@@ -470,7 +470,7 @@ def track_face():
                                 adjust_servo_angles_using_old_logic(x_last, y_last)
                     except:
                         pass
-            
+
             time.sleep(0.01)
 
         except KeyboardInterrupt:
@@ -489,12 +489,12 @@ def main():
             with open(target_file, 'w') as f:
                 f.write('1')
             print("Created target face file with default ID: 1")
-        
+
         # Update the global TARGET_GALLERY_ID from existing file
         global TARGET_GALLERY_ID
         TARGET_GALLERY_ID = get_target_face_id()
         print(f"Starting tracking with initial target ID: {TARGET_GALLERY_ID}")
-        
+
         start_monitor_detection()
         # Give it time to spin up
         time.sleep(2)

@@ -1,3 +1,23 @@
+"""
+Face tracking widget and control system for servo-based camera tracking.
+
+This module provides the core functionality for real-time face tracking using
+servo motors and computer vision. It includes:
+- Motor control system for pan/tilt servo mechanisms
+- Face detection and tracking logic
+- Qt-based UI for controlling tracking operations
+- Inter-process communication for face detection data
+
+The system uses multiple processes to handle video processing and motor control
+separately, communicating via ZMQ and file-based mechanisms.
+
+Dependencies:
+    - PyQt6 for GUI
+    - OpenCV for image processing
+    - Adafruit ServoKit for motor control
+    - ZMQ for inter-process communication
+"""
+
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QPushButton, QLabel,
                              QHBoxLayout, QComboBox, QSizePolicy)
 from PyQt6.QtCore import QThread, pyqtSignal, Qt, QTimer, QEvent
@@ -84,12 +104,33 @@ class MotorTrackingSystem:
                 f.write('1')  # Default face ID
 
     def in_deadzone(self, angle, deadzone):
+        """
+        Check if a given angle falls within the specified deadzone.
+
+        Args:
+            angle (float): The angle to check
+            deadzone (tuple): A tuple of (min, max) defining the deadzone range
+
+        Returns:
+            bool: True if angle is within deadzone, False otherwise
+        """
         dz_min, dz_max = deadzone
         if dz_min <= dz_max:
             return dz_min <= angle <= dz_max
         return False
 
     def set_servo_angle_with_deadzone(self, servo_index, angle, deadzone_key):
+        """
+        Set servo angle while respecting deadzone constraints.
+
+        Args:
+            servo_index (int): Index of the servo to control
+            angle (float): Target angle for the servo
+            deadzone_key (str): Key identifying which deadzone to use ('servo0', 'servo1', 'arm')
+
+        The angle will only be applied if it's outside the specified deadzone
+        and within the valid range (0-180 degrees).
+        """
         angle = max(0, min(180, angle))
         if not self.in_deadzone(angle, self.deadzones[deadzone_key]):
             self.kit.servo[servo_index].angle = angle
@@ -106,6 +147,15 @@ class MotorTrackingSystem:
         self.kit.servo[2].angle = 180 - angle
 
     def start_tracking_motors(self):
+        """
+        Initialize and start the face tracking system processes.
+
+        Launches two separate Python processes:
+        1. monitor_detections.py for face detection monitoring
+        2. tracking_motors.py for servo control
+
+        Also updates the target face ID configuration file.
+        """
         # Get the utils directory path
         utils_dir = os.path.join(self.project_root, 'rpi_control', 'utils')
 
@@ -130,6 +180,15 @@ class MotorTrackingSystem:
                 f.write(str(self.face_to_track))
 
     def stop_tracking_motors(self):
+        """
+        Stop all tracking-related processes and clean up resources.
+
+        Terminates:
+        - Face tracking process
+        - Detection monitoring process
+        - GStreamer pipeline
+        - Any other related camera processes
+        """
         try:
             # Kill tracking Python processes
             subprocess.run(['pkill', '-f', 'tracking_motors.py'], check=False)
@@ -163,6 +222,13 @@ class MotorTrackingSystem:
         self.stop_tracking_motors()
 
     def cleanup(self):
+        """
+        Perform cleanup operations and reset servo positions.
+
+        Stops all tracking processes and smoothly moves servos back to their
+        neutral positions (90 degrees) using interpolated steps to prevent
+        sudden movements.
+        """
         self.stop_tracking_motors()
         # Move servos back to neutral positions smoothly
         target0, target1, targetA = 90, 95, 90
@@ -204,6 +270,15 @@ class MotorTrackingSystem:
 
 
 class FaceTrackingWorker(QThread):
+    """
+    Worker thread for handling face tracking operations.
+
+    Runs the face tracking system in a separate thread to prevent GUI blocking.
+    Emits signals to indicate tracking status changes.
+
+    Signals:
+        finished (bool): Emitted when tracking stops, indicating success/failure
+    """
     finished = pyqtSignal(bool)
 
     def __init__(self, face_tracker):
@@ -352,7 +427,14 @@ class FaceTrackingWidget(QWidget):
             child.installEventFilter(self)
 
     def get_gst_window_id(self):
-        """Get the window ID of gst-launch-1.0"""
+        """
+        Retrieve the window ID of the GStreamer video display.
+
+        Returns:
+            str: Window ID if found, None otherwise
+
+        Uses wmctrl to find the window ID of the gst-launch-1.0 process.
+        """
         try:
             # Get window ID using wmctrl
             result = subprocess.check_output(['wmctrl', '-l']).decode()
@@ -386,7 +468,13 @@ class FaceTrackingWidget(QWidget):
         return False
 
     def activate_gst_window(self):
-        """Activate the gst-launch window if it exists"""
+        """
+        Bring the GStreamer video window to the foreground.
+
+        Attempts to activate the video window using wmctrl if tracking
+        is currently active. Silently fails if window cannot be found
+        or activated.
+        """
         if not self.is_tracking:
             return
 
@@ -464,6 +552,15 @@ class FaceTrackingWidget(QWidget):
             traceback.print_exc()
 
     def change_tracked_face(self, index):
+        """
+        Update the face ID being tracked by the system.
+
+        Args:
+            index (int): Index of the selected face in the combo box
+
+        Updates the tracking system's target face ID if the tracker
+        is initialized and the index is valid.
+        """
         if self.face_tracker and index >= 0:
             face_id = int(self.face_select.currentText().split()[-1])
             self.face_tracker.face_to_track = face_id
@@ -581,17 +678,37 @@ class FaceTrackingWidget(QWidget):
             traceback.print_exc()
 
     def cleanup(self):
-        """Called when widget is being closed"""
+        """
+        Perform cleanup operations when the widget is being destroyed.
+
+        Stops tracking operations and timers to ensure proper resource
+        cleanup and system shutdown.
+        """
         self.is_tracking = False
         self.update_timer.stop()
 
     def hideEvent(self, event):
-        """Called when widget is hidden"""
+        """
+        Handle widget hide events.
+
+        Args:
+            event: Qt hide event object
+
+        Stops the window activation timer when widget is hidden.
+        """
         super().hideEvent(event)
         self.window_timer.stop()
 
     def showEvent(self, event):
-        """Called when widget is shown"""
+        """
+        Handle widget show events.
+
+        Args:
+            event: Qt show event object
+
+        Restarts window activation timer if tracking is active and
+        ensures video window is properly displayed.
+        """
         super().showEvent(event)
         if self.is_tracking:
             self.window_timer.start()

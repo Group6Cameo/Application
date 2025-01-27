@@ -1,3 +1,10 @@
+"""
+This script is used to launch the Cameo application, and runs on bootup of the Raspberry Pi,
+or when user runs `bash start.sh`.
+
+It will start the FastAPI server and the PyQt GUI application.
+"""
+
 import os
 import sys
 import multiprocessing

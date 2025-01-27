@@ -1,3 +1,7 @@
+"""
+This script is used to start the PyQt GUI application.
+"""
+
 import sys
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QPushButton, QStackedWidget, QHBoxLayout, QFrame)

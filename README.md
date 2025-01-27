@@ -1,6 +1,6 @@
 # Cameo Framework
 
-A comprehensive framework for controlling Raspberry Pi-based camouflage displays with face tracking capabilities.
+A comprehensive framework for controlling Raspberry Pi-based adaptive camouflage displays with face tracking and recognition capabilities.
 
 ## Features
 
@@ -15,12 +15,14 @@ A comprehensive framework for controlling Raspberry Pi-based camouflage displays
 ## Prerequisites
 
 - Raspberry Pi 5
+- Raspberry Pi OS (64-bit)
 - Python 3.11+
-- Hailo 8L (for RPi) AI accelerator
-- Servo motors (for tracking)
-- Display screen
-- Camera module
-- NVMe base
+- Hailo 8L NVMe M.2 AI accelerator
+- Raspberry Pi NVMe Base
+- Servo Motors (for tracking)
+- Display Screen
+- Pi Camera Module 3
+- Adafruit 16-Channel PWM / Servo HAT for Raspberry Pi
 
 ## Installation
 
@@ -34,14 +36,14 @@ cd Application
 
 2. Run the setup script:
 ```bash
-sudo bash setup.sh
+bash setup.sh
 ```
 
 The setup script will:
 - Install system dependencies
 - Create Python virtual environment
 - Install Python packages
-- Configure Hailo components
+- Configure Hailo TAPPAS
 - Set up autostart services
 
 ## Project Structure
@@ -108,6 +110,3 @@ MIT
 ## Support
 
 For issues and support, please create an issue in the GitHub repository.
-
-
-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

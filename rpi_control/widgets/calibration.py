@@ -1,3 +1,15 @@
+"""
+Calibration widget module for the RPI control system.
+
+This module provides the widget for generating the camouflage pattern, including:
+- Qr code to upload cameo's surroundings
+- Calibration pattern display, used to automatically detect cameo in its surroundings
+- Asynchronous serverhealth checks
+
+To generate camouflage, scan the QR code and take a picture of the surroundings. Cameo will automatically
+display the camouflage pattern once received form the server.
+"""
+
 from PyQt6.QtWidgets import (QWidget, QPushButton, QVBoxLayout,
                              QLabel, QProgressBar)
 from PyQt6.QtCore import Qt, QTimer
@@ -14,7 +26,24 @@ from functools import partial
 
 
 class QRDialog(QDialog):
+    """
+    Modal dialog for displaying QR codes.
+
+    A specialized dialog that displays a QR code for remote access URLs. The dialog
+    remains on top of other windows and includes forced modal behavior to ensure
+    visibility. It handles window focus and state changes to maintain visibility.
+    """
+
     def __init__(self, url):
+        """
+        Initialize the QR code dialog.
+
+        Args:
+            url (str): The URL to encode in the QR code
+
+        Creates a modal dialog with a QR code and close button, ensuring the
+        dialog stays on top of other windows.
+        """
         super().__init__()
         self.setWindowTitle("Scan QR Code")
 
@@ -75,7 +104,19 @@ class QRDialog(QDialog):
         self.installEventFilter(self)
 
     def eventFilter(self, obj, event):
-        """Handle events to keep dialog on top"""
+        """
+        Filter window events to maintain dialog visibility.
+
+        Args:
+            obj: The object that triggered the event
+            event: The event being processed
+
+        Returns:
+            bool: True if the event was handled, False otherwise
+
+        Ensures the dialog stays on top by intercepting window state
+        and focus change events.
+        """
         if event.type() in [
             QEvent.Type.WindowDeactivate,
             QEvent.Type.FocusOut,
@@ -90,18 +131,41 @@ class QRDialog(QDialog):
         return super().eventFilter(obj, event)
 
     def _ensure_on_top(self):
-        """Helper method to ensure window stays on top"""
+        """
+        Force the dialog to remain the topmost window.
+
+        Activates the window, raises it to the top of the window stack,
+        and ensures it's visible to the user.
+        """
         self.activateWindow()
         self.raise_()
         self.show()
 
     def closeEvent(self, event):
+        """
+        Handle window close events.
+
+        Args:
+            event: The close event being processed
+
+        Prevents spontaneous closing of the dialog while allowing
+        programmatic closure.
+        """
         if event.spontaneous():
             event.ignore()
         else:
             super().closeEvent(event)
 
     def paintEvent(self, event):
+        """
+        Handle paint events for the dialog.
+
+        Args:
+            event: The paint event being processed
+
+        Draws the QR code pixmap centered in the dialog window with
+        appropriate spacing for the close button.
+        """
         painter = QPainter(self)
         x = (self.width() - self.qr_pixmap.width()) // 2
         y = (self.height() - self.qr_pixmap.height() - 60) // 2
@@ -109,7 +173,29 @@ class QRDialog(QDialog):
 
 
 class CalibrationWidget(QWidget):
+    """
+    Widget for system calibration and setup status display.
+
+    Provides a user interface for:
+    - Displaying calibration patterns
+    - Monitoring server initialization
+    - Providing QR code access to upload functionality
+    - Visual feedback during system startup
+
+    The widget automatically transitions from loading state to ready state
+    once the server becomes available.
+    """
+
     def __init__(self):
+        """
+        Initialize the calibration widget.
+
+        Sets up the UI components including:
+        - Loading indicator
+        - Progress bar
+        - QR code access button
+        - Calibration pattern display
+        """
         super().__init__()
         self.layout = QVBoxLayout()
 
@@ -180,7 +266,18 @@ class CalibrationWidget(QWidget):
             self.check_server_status()  # Initial check
 
     async def _check_server_ready(self, url: str) -> bool:
-        """Check if the server is healthy"""
+        """
+        Check if the server is responding and healthy.
+
+        Args:
+            url (str): The server URL to check
+
+        Returns:
+            bool: True if server is healthy, False otherwise
+
+        Performs an asynchronous health check request to the server
+        and verifies the response status.
+        """
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(f"{url}/health") as response:
@@ -191,7 +288,13 @@ class CalibrationWidget(QWidget):
             return False
 
     def check_server_status(self):
-        """Poll the server and update UI accordingly"""
+        """
+        Poll the server status and update the UI accordingly.
+
+        Periodically checks server health and transitions to ready state
+        when the server becomes available. Creates an event loop if
+        necessary for async operations.
+        """
         backend_url = get_backend_url()
         if not backend_url:
             return  # Keep polling if backend URL isn't set yet
@@ -213,17 +316,37 @@ class CalibrationWidget(QWidget):
         loop.run_until_complete(check())
 
     def show_ready_state(self):
-        """Show the ready state UI"""
+        """
+        Transition the widget to its ready state.
+
+        Hides the loading indicators and displays the QR code access
+        button once the server is confirmed to be operational.
+        """
         self.loading_label.hide()
         self.progress_bar.hide()
         self.qr_button.show()
 
     def show_qr_code(self):
+        """
+        Display the QR code dialog for remote access.
+
+        Creates and shows a modal QR code dialog containing the public
+        upload URL for remote access to the system.
+        """
         url = f"{get_public_url()}/static/upload.html"
         dialog = QRDialog(url)
         dialog.exec()
 
     def paintEvent(self, event):
+        """
+        Handle paint events for the widget.
+
+        Args:
+            event: The paint event being processed
+
+        Draws the background and calibration pattern (when in ready state)
+        scaled to fit the widget dimensions.
+        """
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, False)
         painter.fillRect(0, 0, self.width(), self.height(), QColor('#002103'))

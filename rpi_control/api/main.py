@@ -1,9 +1,20 @@
 """
 This module serves as the main FastAPI application entry point, defining all routes
-and their handlers. It implements a REST API for managing VastAI instance management.
+and their handlers. It implements a REST API for managing VastAI instance management
+and image processing for camouflage generation.
+
+The API provides endpoints for:
+- Health checking (/)
+- Image processing for camouflage generation (/process-image)
 
 Environment Variables Required:
     - VAST_AI_API_KEY: Authentication key for VastAI service
+
+Technical Details:
+    - Supports image uploads up to 3MB
+    - Accepts JPG and PNG formats
+    - Implements automatic cleanup of temporary files
+    - Uses async/await for efficient I/O operations
 """
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
@@ -90,7 +101,31 @@ async def process_image(
     file: UploadFile = File(...),
 ):
     """
-    Process an uploaded image file through the ML model.
+    Process an uploaded image file through the ML model to generate a camouflage pattern.
+
+    This endpoint handles the complete flow of:
+    1. Image upload validation and saving
+    2. Communication with the ML backend server
+    3. Saving the generated camouflage pattern
+    4. Cleanup of temporary files
+
+    Args:
+        file (UploadFile): The image file to process. Must be JPG or PNG format, max 3MB.
+
+    Returns:
+        dict: A dictionary containing:
+            - status: "success" if processing completed
+            - original_filename: Name of the uploaded file
+            - saved_as: Unique filename generated for the upload
+            - pattern_path: Path where the generated pattern was saved
+            - size: Size of the uploaded file in bytes
+
+    Raises:
+        HTTPException:
+            - 400: Invalid file type or size
+            - 500: Server-side processing error
+            - 503: Backend communication error
+            - 504: Backend timeout
     """
     if not file:
         raise HTTPException(
@@ -185,7 +220,6 @@ async def process_image(
         raise  # Re-raise HTTP exceptions as-is
 
     except Exception as e:
-        # Log the error here (you should add proper logging)
         print(f"Unexpected error: {str(e)}")
         raise HTTPException(
             status_code=500,

@@ -4,10 +4,10 @@ set -e
 function init_variables() {
     print_help_if_needed $@
     script_dir=$(dirname $(realpath "$0"))
-    
+
     # Get current directory
     readonly CUR_DIR=$(pwd)
-    
+
     # Update paths with CUR_DIR
     readonly RESOURCES_DIR="$CUR_DIR/resources"
     readonly CROPPER_SO="$RESOURCES_DIR/libvms_croppers.so"
