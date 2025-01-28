@@ -210,7 +210,26 @@ class CalibrationWidget(QWidget):
         palette.setColor(QPalette.ColorRole.Window, QColor('#002103'))
         self.setPalette(palette)
 
-        # Create loading message
+        # Create start button
+        self.start_button = QPushButton("Start Camouflage Engine")
+        self.start_button.setStyleSheet("""
+            QPushButton {
+                min-height: 50px;
+                padding: 10px;
+                font-size: 16px;
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                margin: 5px;
+            }
+            QPushButton:pressed {
+                background-color: #45a049;
+            }
+        """)
+        self.start_button.clicked.connect(self.start_initialization)
+
+        # Create loading message (initially hidden)
         self.loading_label = QLabel("Initializing camouflage engine...")
         self.loading_label.setStyleSheet("""
             QLabel {
@@ -220,8 +239,9 @@ class CalibrationWidget(QWidget):
             }
         """)
         self.loading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.loading_label.hide()
 
-        # Create progress bar
+        # Create progress bar (initially hidden)
         self.progress_bar = QProgressBar()
         self.progress_bar.setStyleSheet("""
             QProgressBar {
@@ -234,15 +254,18 @@ class CalibrationWidget(QWidget):
             }
         """)
         self.progress_bar.setMinimum(0)
-        self.progress_bar.setMaximum(0)  # Infinite progress bar
+        self.progress_bar.setMaximum(0)
+        self.progress_bar.hide()
 
         # Create QR code button (initially hidden)
         self.qr_button = QPushButton("Show Upload QR Code")
         self.qr_button.clicked.connect(self.show_qr_code)
         self.qr_button.setFixedSize(200, 40)
-        self.qr_button.hide()  # Initially hidden
+        self.qr_button.hide()
 
         # Add widgets to layout
+        self.layout.addWidget(
+            self.start_button, alignment=Qt.AlignmentFlag.AlignCenter)
         self.layout.addWidget(self.loading_label)
         self.layout.addWidget(self.progress_bar)
         self.layout.addWidget(
@@ -360,3 +383,16 @@ class CalibrationWidget(QWidget):
                 Qt.TransformationMode.FastTransformation
             )
             painter.drawPixmap(0, 0, scaled_image)
+
+    def start_initialization(self):
+        """Start the server initialization process."""
+        # Hide start button and show loading state
+        self.start_button.hide()
+        self.loading_label.show()
+        self.progress_bar.show()
+
+        # Start polling for server status
+        self.poll_timer = QTimer()
+        self.poll_timer.timeout.connect(self.check_server_status)
+        self.poll_timer.start(5000)  # Check every 5 seconds
+        self.check_server_status()  # Initial check
