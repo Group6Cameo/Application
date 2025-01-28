@@ -95,7 +95,7 @@ class BrightnessManager(QObject):
 
                 # Map clear value to additional brightness (0-60%)
                 additional_brightness = min(
-                    max((c / 6000) * 100, 0), 60)
+                    max((c / 3000) * 100, 0), 68)
 
                 # Combine base and additional brightness
                 total_brightness = BASE_BRIGHTNESS + additional_brightness
@@ -108,7 +108,7 @@ class BrightnessManager(QObject):
 
                 # Debug print
                 print(
-                    f"Light value: {c}, Additional: {additional_brightness:.1f}%, Total: {brightness_percent:.1f}%")
+                    f"Light value: {c}, colors: {r, g, b}, Additional: {additional_brightness:.1f}%, Total: {brightness_percent:.1f}%")
 
                 time.sleep(0.1)
 
