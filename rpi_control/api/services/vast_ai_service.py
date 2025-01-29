@@ -51,6 +51,7 @@ class VastAIService:
             "RTX_A4000"
         ]
         print("VAST AI SERVICE INITIALIZED")
+        self.instance_id = None
 
     async def start_instance(self, instance_id: int) -> Dict[str, Any]:
         """
@@ -82,6 +83,20 @@ class VastAIService:
             return {
                 "status": "success",
                 "message": "Instance stopped",
+                "details": response
+            }
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    async def destroy_instance(self) -> Dict[str, Any]:
+        try:
+            if not self.instance_id:
+                return {"status": "error", "message": "Instance ID not found"}
+            response = self.client.destroy_instance(id=self.instance_id)
+            self.instance_id = None
+            return {
+                "status": "success",
+                "message": "Instance destroyed",
                 "details": response
             }
         except Exception as e:
@@ -165,6 +180,7 @@ class VastAIService:
                                 port = port_mappings[0].get("HostPort")
 
                         if port:
+                            self.instance_id = instance["id"]
                             return {
                                 "status": "success",
                                 "message": "Instance created and server is ready",

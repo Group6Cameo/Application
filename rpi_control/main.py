@@ -16,6 +16,8 @@ from .utils.brightness_manager import BrightnessManager
 import glob
 import os
 from pathlib import Path
+import asyncio
+from .api.services.vast_ai_service import VastAIService
 
 
 class MenuWidget(QWidget):
@@ -77,6 +79,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        self.vast_service = VastAIService()
         self.brightness_manager = BrightnessManager()
         self.initUI()
         # Connect brightness manager to overlay after initUI creates it
@@ -183,6 +186,12 @@ class MainWindow(QMainWindow):
         # Stop brightness manager if it exists
         if hasattr(self, 'brightness_manager'):
             self.brightness_manager.stop()
+
+        # Create event loop and run destroy_instance
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(self.vast_service.destroy_instance())
+        loop.close()
 
         sys.exit(0)
 
