@@ -155,10 +155,10 @@ async def process_image(
         # Save uploaded file
         try:
             contents = await file.read()
-            if len(contents) > 3 * 1024 * 1024:  # 3MB limit
+            if len(contents) > 10 * 1024 * 1024:  # 10MB limit
                 raise HTTPException(
                     status_code=400,
-                    detail="File size too large. Maximum size is 3MB"
+                    detail="File size too large. Maximum size is 10MB"
                 )
 
             async with aiofiles.open(upload_path, "wb") as f:
