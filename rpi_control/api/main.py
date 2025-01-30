@@ -50,15 +50,15 @@ async def startup_event():
     """Initialize VastAI instance and set backend URL on startup"""
     global BACKEND_URL
     clean_backend_url()
-    result = await vast_service.create_instance()
-    if result["status"] != "success":
-        raise RuntimeError(
-            f"Failed to create VastAI instance: {result['message']}")
+    # result = await vast_service.create_instance()
+    # if result["status"] != "success":
+    #     raise RuntimeError(
+    #         f"Failed to create VastAI instance: {result['message']}")
 
-    # Extract IP and port from the response
-    instance_ip = result["public_ip"][0]
-    instance_port = result["port"]
-    BACKEND_URL = f"http://{instance_ip}:{instance_port}"
+    # # Extract IP and port from the response
+    # instance_ip = result["public_ip"][0]
+    # instance_port = result["port"]
+    BACKEND_URL = f"http://195.0.159.206:55751"
 
     # Save the backend URL
     save_backend_url(BACKEND_URL)
