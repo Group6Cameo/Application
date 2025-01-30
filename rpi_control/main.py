@@ -187,11 +187,11 @@ class MainWindow(QMainWindow):
         if hasattr(self, 'brightness_manager'):
             self.brightness_manager.stop()
 
-        # Create event loop and run destroy_instance
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(self.vast_service.destroy_instance())
-        loop.close()
+        # # Create event loop and run destroy_instance
+        # loop = asyncio.new_event_loop()
+        # asyncio.set_event_loop(loop)
+        # loop.run_until_complete(self.vast_service.destroy_instance())
+        # loop.close()
 
         sys.exit(0)
 
