@@ -178,7 +178,7 @@ async def process_image(
                                 content_type=file.content_type)
 
             async with aiohttp.ClientSession() as session:
-                async with session.get(f"{BACKEND_URL}/generate-camouflage", data=form_data, timeout=60) as response:
+                async with session.get(f"http://195.0.159.206:55751/generate-camouflage", data=form_data, timeout=60) as response:
                     if response.status != 200:
                         raise HTTPException(
                             status_code=response.status,
