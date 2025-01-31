@@ -95,13 +95,13 @@ class BrightnessManager(QObject):
 
                 # Map clear value to additional brightness (0-60%)
                 additional_brightness = min(
-                    max((c / 30000) * 100, 0), 80)
+                    max((c / 10000) * 100, 0), 80)
 
                 # Combine base and additional brightness
                 total_brightness = BASE_BRIGHTNESS + additional_brightness
 
                 # Clamp final value between 0-100
-                brightness_percent = 100
+                brightness_percent = min(max(total_brightness, 0), 100)
 
                 # Emit the brightness change signal
                 self.brightness_changed.emit(int(brightness_percent))
